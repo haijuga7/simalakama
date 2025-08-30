@@ -1,0 +1,430 @@
+-- FlyFling Script - Standalone Version
+-- Extracted from Infinite Yield script
+-- Features: FlyFling toggle with draggable UI
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+
+local Player = Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+local RootPart = Character:FindFirstChild("HumanoidRootPart") or Character:FindFirstChild("Torso") or Character:FindFirstChild("UpperTorso")
+
+-- Variables
+local FLYING = false
+local vehicleflyspeed = 1
+local flyKeyDown, flyKeyUp
+local velocityHandlerName = "VelocityHandler_" .. math.random(1000, 9999)
+local gyroHandlerName = "GyroHandler_" .. math.random(1000, 9999)
+
+-- Utility Functions
+local function getRoot(char)
+    local rootPart = char:FindFirstChild('HumanoidRootPart') or char:FindFirstChild('Torso') or char:FindFirstChild('UpperTorso')
+    return rootPart
+end
+
+local function randomString()
+    local length = math.random(10,20)
+    local array = {}
+    for i = 1, length do
+        array[i] = string.char(math.random(32, 126))
+    end
+    return table.concat(array)
+end
+
+-- Fly Functions
+local function NOFLY()
+    FLYING = false
+    if flyKeyDown or flyKeyUp then 
+        flyKeyDown:Disconnect() 
+        flyKeyUp:Disconnect() 
+    end
+    
+    local char = Player.Character
+    if char and char:FindFirstChildOfClass('Humanoid') then
+        char:FindFirstChildOfClass('Humanoid').PlatformStand = false
+    end
+    
+    pcall(function() 
+        workspace.CurrentCamera.CameraType = Enum.CameraType.Custom 
+    end)
+    
+    -- Clean up velocity handlers
+    if RootPart then
+        local velHandler = RootPart:FindFirstChild(velocityHandlerName)
+        local gyroHandler = RootPart:FindFirstChild(gyroHandlerName)
+        if velHandler then velHandler:Destroy() end
+        if gyroHandler then gyroHandler:Destroy() end
+    end
+end
+
+local function sFLY(vfly)
+    local char = Player.Character or Player.CharacterAdded:Wait()
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then
+        repeat task.wait() until char:FindFirstChildOfClass("Humanoid")
+        humanoid = char:FindFirstChildOfClass("Humanoid")
+    end
+
+    if flyKeyDown or flyKeyUp then
+        flyKeyDown:Disconnect()
+        flyKeyUp:Disconnect()
+    end
+
+    local T = getRoot(char)
+    local CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+    local lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+    local SPEED = 0
+
+    local function FLY()
+        FLYING = true
+        local BG = Instance.new('BodyGyro')
+        local BV = Instance.new('BodyVelocity')
+        BG.P = 9e4
+        BG.Parent = T
+        BV.Parent = T
+        BG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+        BG.CFrame = T.CFrame
+        BV.Velocity = Vector3.new(0, 0, 0)
+        BV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        
+        task.spawn(function()
+            repeat task.wait()
+                local camera = workspace.CurrentCamera
+                if not vfly and humanoid then
+                    humanoid.PlatformStand = true
+                end
+
+                if CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0 then
+                    SPEED = 50
+                elseif not (CONTROL.L + CONTROL.R ~= 0 or CONTROL.F + CONTROL.B ~= 0 or CONTROL.Q + CONTROL.E ~= 0) and SPEED ~= 0 then
+                    SPEED = 0
+                end
+                
+                if (CONTROL.L + CONTROL.R) ~= 0 or (CONTROL.F + CONTROL.B) ~= 0 or (CONTROL.Q + CONTROL.E) ~= 0 then
+                    BV.Velocity = ((camera.CFrame.LookVector * (CONTROL.F + CONTROL.B)) + ((camera.CFrame * CFrame.new(CONTROL.L + CONTROL.R, (CONTROL.F + CONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).p) - camera.CFrame.p)) * SPEED
+                    lCONTROL = {F = CONTROL.F, B = CONTROL.B, L = CONTROL.L, R = CONTROL.R}
+                elseif (CONTROL.L + CONTROL.R) == 0 and (CONTROL.F + CONTROL.B) == 0 and (CONTROL.Q + CONTROL.E) == 0 and SPEED ~= 0 then
+                    BV.Velocity = ((camera.CFrame.LookVector * (lCONTROL.F + lCONTROL.B)) + ((camera.CFrame * CFrame.new(lCONTROL.L + lCONTROL.R, (lCONTROL.F + lCONTROL.B + CONTROL.Q + CONTROL.E) * 0.2, 0).p) - camera.CFrame.p)) * SPEED
+                else
+                    BV.Velocity = Vector3.new(0, 0, 0)
+                end
+                BG.CFrame = camera.CFrame
+            until not FLYING
+            CONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+            lCONTROL = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+            SPEED = 0
+            BG:Destroy()
+            BV:Destroy()
+
+            if humanoid then humanoid.PlatformStand = false end
+        end)
+    end
+
+    flyKeyDown = UserInputService.InputBegan:Connect(function(input, processed)
+        if input.KeyCode == Enum.KeyCode.W then
+            CONTROL.F = (vfly and vehicleflyspeed or 1)
+        elseif input.KeyCode == Enum.KeyCode.S then
+            CONTROL.B = - (vfly and vehicleflyspeed or 1)
+        elseif input.KeyCode == Enum.KeyCode.A then
+            CONTROL.L = - (vfly and vehicleflyspeed or 1)
+        elseif input.KeyCode == Enum.KeyCode.D then
+            CONTROL.R = (vfly and vehicleflyspeed or 1)
+        elseif input.KeyCode == Enum.KeyCode.E then
+            CONTROL.Q = (vfly and vehicleflyspeed or 1)*2
+        elseif input.KeyCode == Enum.KeyCode.Q then
+            CONTROL.E = -(vfly and vehicleflyspeed or 1)*2
+        end
+        pcall(function() camera.CameraType = Enum.CameraType.Track end)
+    end)
+
+    flyKeyUp = UserInputService.InputEnded:Connect(function(input, processed)
+        if input.KeyCode == Enum.KeyCode.W then
+            CONTROL.F = 0
+        elseif input.KeyCode == Enum.KeyCode.S then
+            CONTROL.B = 0
+        elseif input.KeyCode == Enum.KeyCode.A then
+            CONTROL.L = 0
+        elseif input.KeyCode == Enum.KeyCode.D then
+            CONTROL.R = 0
+        elseif input.KeyCode == Enum.KeyCode.E then
+            CONTROL.Q = 0
+        elseif input.KeyCode == Enum.KeyCode.Q then
+            CONTROL.E = 0
+        end
+    end)
+
+    FLY()
+end
+
+-- WalkFling Functions
+local walkflinging = false
+local function walkfling()
+    local humanoid = Player.Character:FindFirstChildWhichIsA("Humanoid")
+    if humanoid then
+        humanoid.Died:Connect(function()
+            walkfling_stop()
+        end)
+    end
+
+    walkflinging = true
+    repeat RunService.Heartbeat:Wait()
+        local character = Player.Character
+        local root = getRoot(character)
+        local vel, movel = nil, 0.1
+
+        while not (character and character.Parent and root and root.Parent) do
+            RunService.Heartbeat:Wait()
+            character = Player.Character
+            root = getRoot(character)
+        end
+
+        vel = root.Velocity
+        root.Velocity = vel * 10000 + Vector3.new(0, 10000, 0)
+
+        RunService.RenderStepped:Wait()
+        if character and character.Parent and root and root.Parent then
+            root.Velocity = vel
+        end
+
+        RunService.Stepped:Wait()
+        if character and character.Parent and root and root.Parent then
+            root.Velocity = vel + Vector3.new(0, movel, 0)
+            movel = movel * -1
+        end
+    until walkflinging == false
+end
+
+local function walkfling_stop()
+    walkflinging = false
+end
+
+-- Main FlyFling Function
+local function flyfling(speed)
+    if speed and tonumber(speed) then
+        vehicleflyspeed = tonumber(speed)
+    end
+    
+    NOFLY()
+    task.wait()
+    sFLY(true)
+    walkfling()
+end
+
+local function unflyfling()
+    NOFLY()
+    walkfling_stop()
+end
+
+-- UI Creation
+local function createUI()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "FlyFlingUI_" .. randomString()
+    ScreenGui.Parent = CoreGui
+    
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 200, 0, 120)
+    MainFrame.Position = UDim2.new(0.5, -100, 0.5, -60)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Parent = ScreenGui
+    
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 8)
+    Corner.Parent = MainFrame
+    
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Size = UDim2.new(1, 0, 0, 30)
+    Title.Position = UDim2.new(0, 0, 0, 0)
+    Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    Title.BorderSizePixel = 0
+    Title.Font = Enum.Font.Code
+    Title.TextSize = 14
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.Text = "FlyFling Controller"
+    Title.Parent = MainFrame
+    
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.CornerRadius = UDim.new(0, 8)
+    TitleCorner.Parent = Title
+    
+    local ToggleButton = Instance.new("TextButton")
+    ToggleButton.Name = "ToggleButton"
+    ToggleButton.Size = UDim2.new(0.8, 0, 0, 40)
+    ToggleButton.Position = UDim2.new(0.1, 0, 0.4, 0)
+    ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    ToggleButton.BorderSizePixel = 0
+    ToggleButton.Font = Enum.Font.Code
+    ToggleButton.TextSize = 16
+    ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleButton.Text = "OKE GAS"
+    ToggleButton.Parent = MainFrame
+    
+    local ToggleCorner = Instance.new("UICorner")
+    ToggleCorner.CornerRadius = UDim.new(0, 6)
+    ToggleCorner.Parent = ToggleButton
+    
+    local SpeedLabel = Instance.new("TextLabel")
+    SpeedLabel.Name = "SpeedLabel"
+    SpeedLabel.Size = UDim2.new(0.4, 0, 0, 20)
+    SpeedLabel.Position = UDim2.new(0.1, 0, 0.8, 0)
+    SpeedLabel.BackgroundTransparency = 1
+    SpeedLabel.Font = Enum.Font.Code
+    SpeedLabel.TextSize = 12
+    SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    SpeedLabel.Text = "Speed: " .. vehicleflyspeed
+    SpeedLabel.Parent = MainFrame
+    
+    -- Dragging functionality
+    local UserInputService = game:GetService("UserInputService")
+    local dragging
+    local dragInput
+    local dragStart
+    local startPos
+    
+    local function updateInput(input)
+        local delta = input.Position - dragStart
+        local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        MainFrame.Position = position
+    end
+    
+    Title.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    Title.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            updateInput(input)
+        end
+    end)
+    
+    -- Toggle functionality
+    local isEnabled = false
+    ToggleButton.MouseButton1Click:Connect(function()
+        if not isEnabled then
+            flyfling(vehicleflyspeed)
+            ToggleButton.Text = "DISABLE FLYFLING"
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+            isEnabled = true
+        else
+            unflyfling()
+            ToggleButton.Text = "OKE GAS"
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            isEnabled = false
+        end
+    end)
+    
+    -- Speed adjustment
+    local SpeedUp = Instance.new("TextButton")
+    SpeedUp.Name = "SpeedUp"
+    SpeedUp.Size = UDim2.new(0.15, 0, 0, 20)
+    SpeedUp.Position = UDim2.new(0.55, 0, 0.8, 0)
+    SpeedUp.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    SpeedUp.BorderSizePixel = 0
+    SpeedUp.Font = Enum.Font.Code
+    SpeedUp.TextSize = 12
+    SpeedUp.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SpeedUp.Text = "+"
+    SpeedUp.Parent = MainFrame
+    
+    local SpeedUpCorner = Instance.new("UICorner")
+    SpeedUpCorner.CornerRadius = UDim.new(0, 4)
+    SpeedUpCorner.Parent = SpeedUp
+    
+    local SpeedDown = Instance.new("TextButton")
+    SpeedDown.Name = "SpeedDown"
+    SpeedDown.Size = UDim2.new(0.15, 0, 0, 20)
+    SpeedDown.Position = UDim2.new(0.75, 0, 0.8, 0)
+    SpeedDown.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    SpeedDown.BorderSizePixel = 0
+    SpeedDown.Font = Enum.Font.Code
+    SpeedDown.TextSize = 12
+    SpeedDown.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SpeedDown.Text = "-"
+    SpeedDown.Parent = MainFrame
+    
+    local SpeedDownCorner = Instance.new("UICorner")
+    SpeedDownCorner.CornerRadius = UDim.new(0, 4)
+    SpeedDownCorner.Parent = SpeedDown
+    
+    SpeedUp.MouseButton1Click:Connect(function()
+        vehicleflyspeed = math.min(vehicleflyspeed + 0.5, 10)
+        SpeedLabel.Text = "Speed: " .. vehicleflyspeed
+        if isEnabled then
+            flyfling(vehicleflyspeed)
+        end
+    end)
+    
+    SpeedDown.MouseButton1Click:Connect(function()
+        vehicleflyspeed = math.max(vehicleflyspeed - 0.5, 0.5)
+        SpeedLabel.Text = "Speed: " .. vehicleflyspeed
+        if isEnabled then
+            flyfling(vehicleflyspeed)
+        end
+    end)
+    
+    -- Close button
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Name = "CloseButton"
+    CloseButton.Size = UDim2.new(0, 20, 0, 20)
+    CloseButton.Position = UDim2.new(1, -25, 0, 5)
+    CloseButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    CloseButton.BorderSizePixel = 0
+    CloseButton.Font = Enum.Font.Code
+    CloseButton.TextSize = 12
+    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseButton.Text = "X"
+    CloseButton.Parent = MainFrame
+    
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 4)
+    CloseCorner.Parent = CloseButton
+    
+    CloseButton.MouseButton1Click:Connect(function()
+        if isEnabled then
+            unflyfling()
+        end
+        ScreenGui:Destroy()
+    end)
+    
+    return ScreenGui
+end
+
+-- Initialize
+local ui = createUI()
+
+-- Character respawn handling
+Player.CharacterAdded:Connect(function(char)
+    Character = char
+    Humanoid = char:WaitForChild("Humanoid")
+    RootPart = char:WaitForChild("HumanoidRootPart") or char:WaitForChild("Torso") or char:WaitForChild("UpperTorso")
+    
+    if FLYING then
+        task.wait(1)
+        flyfling(vehicleflyspeed)
+    end
+end)
+
+print("FlyFling Script Loaded!")
+print("Controls: WASD to move, QE to go up/down")
+print("Speed can be adjusted with +/- buttons")
