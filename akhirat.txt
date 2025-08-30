@@ -1,0 +1,56 @@
+-- Roblox Spam Teleport Script
+-- Teleports between two locations in a loop
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+-- Two locations to teleport between
+local location1 = Vector3.new(3024.34, 7877.16, 1055.04)
+local location2 = Vector3.new(-225, 121, 174)
+
+-- Teleport function
+local function teleportToLocation(position)
+    if HumanoidRootPart then
+        HumanoidRootPart.CFrame = CFrame.new(position)
+    end
+end
+
+-- Main loop
+local isRunning = true
+local currentLocation = 1
+
+spawn(function()
+    while isRunning do
+        if currentLocation == 1 then
+            teleportToLocation(location1)
+            currentLocation = 2
+        else
+            teleportToLocation(location2)
+            currentLocation = 1
+        end
+        
+        -- Wait before next teleport (adjust this value to control speed)
+        wait(0.1) -- 0.1 seconds between teleports
+    end
+end)
+
+-- Stop function (you can call this to stop the loop)
+local function stopTeleport()
+    isRunning = false
+end
+
+-- Optional: Add a keybind to stop/start
+local UserInputService = game:GetService("UserInputService")
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.X then -- Press X to stop
+        stopTeleport()
+        print("Teleport stopped!")
+    end
+end)
+
+print("Spam teleport started! Press X to stop.")
+print("Teleporting between:")
+print("Location 1: " .. tostring(location1))
+print("Location 2: " .. tostring(location2))
