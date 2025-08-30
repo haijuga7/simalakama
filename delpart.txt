@@ -1,0 +1,327 @@
+-- Script UI Toggle Delete Part
+-- Executor Compatible Version
+-- 2 Mode: v1 (pindah ke atas) dan v2 (delete saat on)
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+-- Variabel global
+local deleteMode = "v2" -- v1 atau v2
+local isEnabled = false
+local originalPositions = {} -- Simpan posisi asli part
+local player = Players.LocalPlayer
+
+-- Fungsi untuk membuat UI
+local function createUI()
+    local playerGui = player:WaitForChild("PlayerGui")
+    
+    -- Hapus UI lama jika ada
+    local existingUI = playerGui:FindFirstChild("DeletePartUI")
+    if existingUI then
+        existingUI:Destroy()
+    end
+    
+    -- Buat ScreenGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "DeletePartUI"
+    screenGui.Parent = playerGui
+    screenGui.ResetOnSpawn = false
+    
+    -- Frame utama
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 300, 0, 200)
+    mainFrame.Position = UDim2.new(0, 10, 0, 10)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = screenGui
+    
+    -- Corner radius
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = mainFrame
+    
+    -- Drag handle (title bar)
+    local dragHandle = Instance.new("Frame")
+    dragHandle.Name = "DragHandle"
+    dragHandle.Size = UDim2.new(1, 0, 0, 40)
+    dragHandle.Position = UDim2.new(0, 0, 0, 0)
+    dragHandle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    dragHandle.BorderSizePixel = 0
+    dragHandle.Parent = mainFrame
+    
+    local dragCorner = Instance.new("UICorner")
+    dragCorner.CornerRadius = UDim.new(0, 10)
+    dragCorner.Parent = dragHandle
+    
+    -- Drag icon
+    local dragIcon = Instance.new("TextLabel")
+    dragIcon.Name = "DragIcon"
+    dragIcon.Size = UDim2.new(0, 20, 0, 20)
+    dragIcon.Position = UDim2.new(0, 10, 0, 10)
+    dragIcon.BackgroundTransparency = 1
+    dragIcon.Text = "⋮⋮"
+    dragIcon.TextColor3 = Color3.fromRGB(200, 200, 200)
+    dragIcon.TextScaled = true
+    dragIcon.Font = Enum.Font.SourceSansBold
+    dragIcon.Parent = dragHandle
+    
+    -- Title
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.new(1, -40, 0, 40)
+    title.Position = UDim2.new(0, 40, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "Delete Part System"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextScaled = true
+    title.Font = Enum.Font.SourceSansBold
+    title.Parent = mainFrame
+    
+    -- Toggle Button
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Name = "ToggleButton"
+    toggleButton.Size = UDim2.new(0.8, 0, 0, 40)
+    toggleButton.Position = UDim2.new(0.1, 0, 0, 60)
+    toggleButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+    toggleButton.Text = "OFF"
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.TextScaled = true
+    toggleButton.Font = Enum.Font.SourceSansBold
+    toggleButton.Parent = mainFrame
+    
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(0, 8)
+    toggleCorner.Parent = toggleButton
+    
+    -- Mode Selection
+    local modeFrame = Instance.new("Frame")
+    modeFrame.Name = "ModeFrame"
+    modeFrame.Size = UDim2.new(0.8, 0, 0, 30)
+    modeFrame.Position = UDim2.new(0.1, 0, 0, 110)
+    modeFrame.BackgroundTransparency = 1
+    modeFrame.Parent = mainFrame
+    
+    local modeLabel = Instance.new("TextLabel")
+    modeLabel.Name = "ModeLabel"
+    modeLabel.Size = UDim2.new(0.3, 0, 1, 0)
+    modeLabel.Position = UDim2.new(0, 0, 0, 0)
+    modeLabel.BackgroundTransparency = 1
+    modeLabel.Text = "Mode:"
+    modeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    modeLabel.TextScaled = true
+    modeLabel.Font = Enum.Font.SourceSans
+    modeLabel.TextXAlignment = Enum.TextXAlignment.Left
+    modeLabel.Parent = modeFrame
+    
+    local modeButton = Instance.new("TextButton")
+    modeButton.Name = "ModeButton"
+    modeButton.Size = UDim2.new(0.6, 0, 1, 0)
+    modeButton.Position = UDim2.new(0.4, 0, 0, 0)
+    modeButton.BackgroundColor3 = Color3.fromRGB(255, 150, 100)
+    modeButton.Text = "V2 (Delete)"
+    modeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    modeButton.TextScaled = true
+    modeButton.Font = Enum.Font.SourceSans
+    modeButton.Parent = modeFrame
+    
+    local modeCorner = Instance.new("UICorner")
+    modeCorner.CornerRadius = UDim.new(0, 5)
+    modeCorner.Parent = modeButton
+    
+    -- Status Label
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Name = "StatusLabel"
+    statusLabel.Size = UDim2.new(0.8, 0, 0, 20)
+    statusLabel.Position = UDim2.new(0.1, 0, 0, 150)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = "Status: Disabled"
+    statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    statusLabel.TextScaled = true
+    statusLabel.Font = Enum.Font.SourceSans
+    statusLabel.Parent = mainFrame
+    
+    -- Event handlers
+    toggleButton.MouseButton1Click:Connect(function()
+        isEnabled = not isEnabled
+        if isEnabled then
+            toggleButton.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+            toggleButton.Text = "ON"
+            statusLabel.Text = "Status: Enabled - Click parts to delete"
+        else
+            toggleButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+            toggleButton.Text = "OFF"
+            statusLabel.Text = "Status: Disabled"
+            
+            -- Restore parts jika mode v1
+            if deleteMode == "v1" then
+                restoreParts()
+            end
+        end
+    end)
+    
+    modeButton.MouseButton1Click:Connect(function()
+        if deleteMode == "v1" then
+            deleteMode = "v2"
+            modeButton.Text = "V2 (Delete)"
+            modeButton.BackgroundColor3 = Color3.fromRGB(255, 150, 100)
+        else
+            deleteMode = "v1"
+            modeButton.Text = "V1 (Move Up)"
+            modeButton.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
+        end
+    end)
+    
+    -- Drag functionality
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
+    
+    local function updateDrag(input)
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(0, startPos.X.Offset + delta.X, 0, startPos.Y.Offset + delta.Y)
+    end
+    
+    dragHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = mainFrame.Position
+            
+            -- Visual feedback
+            dragHandle.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+            dragIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+        end
+    end)
+    
+    dragHandle.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateDrag(input)
+                end
+            end)
+    
+    dragHandle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+            dragStart = nil
+            startPos = nil
+            
+            -- Reset visual feedback
+            dragHandle.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+            dragIcon.TextColor3 = Color3.fromRGB(200, 200, 200)
+    end
+end)
+
+    return screenGui
+end
+
+-- Fungsi untuk menyimpan posisi asli part
+local function saveOriginalPosition(part)
+    if not originalPositions[part] then
+        originalPositions[part] = part.Position
+    end
+end
+
+-- Fungsi untuk restore part ke posisi asli
+local function restoreParts()
+    for part, originalPos in pairs(originalPositions) do
+        if part and part.Parent then
+            part.Position = originalPos
+        end
+    end
+    originalPositions = {}
+end
+
+-- Fungsi untuk handle part deletion
+local function handlePartDeletion(part)
+    if not isEnabled then return end
+    
+    if deleteMode == "v1" then
+        -- Mode v1: Pindahkan part ke atas
+        saveOriginalPosition(part)
+        part.Position = Vector3.new(part.Position.X, part.Position.Y + 10000, part.Position.Z)
+        showNotification("Part moved up: " .. part.Name)
+        
+    elseif deleteMode == "v2" then
+        -- Mode v2: Delete part
+        part:Destroy()
+        showNotification("Part deleted: " .. part.Name)
+    end
+end
+
+-- Fungsi untuk setup part detection
+local function setupPartDetection()
+    -- Deteksi click pada part
+    local connection
+    connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mouse = player:GetMouse()
+            local target = mouse.Target
+            
+            if target and target:IsA("BasePart") then
+                handlePartDeletion(target)
+            end
+            end
+        end)
+    end
+    
+-- Fungsi untuk menampilkan notifikasi
+local function showNotification(message, duration)
+    duration = duration or 3
+    local playerGui = player:WaitForChild("PlayerGui")
+    
+    local notification = Instance.new("ScreenGui")
+    notification.Name = "Notification"
+    notification.Parent = playerGui
+    
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 300, 0, 50)
+    frame.Position = UDim2.new(0.5, -150, 0, 50)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.BackgroundTransparency = 0.3
+    frame.BorderSizePixel = 0
+    frame.Parent = notification
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = frame
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = message
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextScaled = true
+    label.Font = Enum.Font.SourceSansBold
+    label.Parent = frame
+    
+    -- Animate in
+    frame.Position = UDim2.new(0.5, -150, 0, -50)
+    local tween = TweenService:Create(frame, TweenInfo.new(0.3), {Position = UDim2.new(0.5, -150, 0, 50)})
+    tween:Play()
+    
+    -- Auto remove
+    game:GetService("Debris"):AddItem(notification, duration)
+end
+
+-- Inisialisasi
+local function initialize()
+    -- Wait for player to load
+    if not player.Character then
+        player.CharacterAdded:Wait()
+    end
+    
+    local ui = createUI()
+    setupPartDetection()
+    showNotification("Delete Part System Loaded!", 2)
+end
+
+-- Jalankan script dengan error handling
+local success, error = pcall(initialize)
+if not success then
+    warn("Error initializing Delete Part System: " .. tostring(error))
+end
