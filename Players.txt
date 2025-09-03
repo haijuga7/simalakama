@@ -219,6 +219,9 @@ local infinityJumpEnabled = false
 local infinityJumpConnection
 local minimized = false
 
+-- [!] TAMBAHAN: Variabel untuk menyimpan nilai walk speed yang dipilih user
+local currentWalkSpeed = defaultWalkSpeed
+
 -- Fungsi toggle button
 local function toggleButton(btn, state)
     if state then
@@ -232,6 +235,8 @@ end
 
 -- Update WalkSpeed
 local function updateWalkSpeed(value)
+    currentWalkSpeed = value  -- [!] Simpan nilai yang dipilih user
+    
     local char = LocalPlayer.Character
     if char then
         local hum = char:FindFirstChildOfClass("Humanoid")
@@ -261,30 +266,55 @@ end)
 speedToggle.MouseButton1Click:Connect(function()
     speedEnabled = not speedEnabled
     toggleButton(speedToggle, speedEnabled)
-    updateWalkSpeed(defaultWalkSpeed)
+    updateWalkSpeed(currentWalkSpeed)  -- [!] Gunakan nilai yang disimpan, bukan default
 end)
+
+-- [!] TAMBAHAN: Fungsi untuk membuat headlamp
+local function createHeadlamp()
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Head") then
+        local head = char.Head
+        
+        -- Hapus headlamp lama jika ada
+        if headlampLight then
+            headlampLight:Destroy()
+            headlampLight = nil
+        end
+        
+        -- Buat attachment dan point light
+        local attachment = Instance.new("Attachment")
+        attachment.Name = "HeadlampAttachment"
+        attachment.Parent = head
+        attachment.Position = Vector3.new(0, 0.5, 0)  -- Posisi di atas kepala
+        
+        headlampLight = Instance.new("PointLight")
+        headlampLight.Brightness = 3
+        headlampLight.Range = 20
+        headlampLight.Color = Color3.fromRGB(255, 240, 200)
+        headlampLight.Parent = attachment
+    end
+end
+
+-- [!] TAMBAHAN: Fungsi untuk menghapus headlamp
+local function removeHeadlamp()
+    if headlampLight then
+        headlampLight:Destroy()
+        headlampLight = nil
+    end
+end
 
 -- Toggle Headlamp
 local function toggleHeadlamp()
     headlampEnabled = not headlampEnabled
     toggleButton(headlampToggle, headlampEnabled)
+    
     if headlampEnabled then
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Head") then
-            local head = char.Head
-            local attachment = Instance.new("Attachment", head)
-            headlampLight = Instance.new("PointLight", attachment)
-            headlampLight.Brightness = 3
-            headlampLight.Range = 20
-            headlampLight.Color = Color3.fromRGB(255, 240, 200)
-        end
+        createHeadlamp()
     else
-        if headlampLight then
-            headlampLight:Destroy()
-            headlampLight = nil
-        end
+        removeHeadlamp()
     end
 end
+
 headlampToggle.MouseButton1Click:Connect(toggleHeadlamp)
 
 -- Toggle Infinity Jump
@@ -310,6 +340,22 @@ local function toggleInfinityJump()
     end
 end
 infinityJumpToggle.MouseButton1Click:Connect(toggleInfinityJump)
+
+-- [!] TAMBAHAN: Fungsi untuk menerapkan settings ke karakter baru
+local function applySettingsToCharacter()
+    -- Terapkan walk speed
+    updateWalkSpeed(currentWalkSpeed)
+    
+    -- Terapkan headlamp jika aktif
+    if headlampEnabled then
+        createHeadlamp()
+    end
+    
+    -- Terapkan infinity jump jika aktif
+    if infinityJumpEnabled then
+        toggleInfinityJump()
+    end
+end
 
 -- Teleport menu
 local teleportFrame = Instance.new("Frame")
@@ -425,6 +471,15 @@ UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         update(input)
     end
+end)
+
+-- [!] TAMBAHAN: Event untuk mendeteksi ketika karakter berubah
+LocalPlayer.CharacterAdded:Connect(function(character)
+    -- Tunggu humanoid tersedia
+    local humanoid = character:WaitForChild("Humanoid")
+    
+    -- Terapkan settings ke karakter baru
+    applySettingsToCharacter()
 end)
 
 -- Inisialisasi
