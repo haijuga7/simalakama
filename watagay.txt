@@ -21,9 +21,9 @@ local teleportDelays = {
     60,
     60,
     60,
+    60,
+    60,
     10,
-    10,
-    5,
     5,
     1
     
@@ -156,15 +156,12 @@ local function startTeleportLoop()
     
     teleportCoroutine = coroutine.create(function()
         while isTeleporting do
-            wait(60)
             for i, position in ipairs(teleportPositions) do
                 if not isTeleporting then break end
                 
                 -- Teleport ke posisi
-                teleportToPosition(position)
-                
-                -- Tunggu delay yang ditentukan
                 wait(teleportDelays[i] or 1)
+                teleportToPosition(position)
                 
                 -- Jika ini adalah teleport terakhir, lakukan auto respawn
                 if i == #teleportPositions and isTeleporting then
