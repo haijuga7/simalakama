@@ -11,9 +11,9 @@ local teleportPositions = {
     Vector3.new(-899.6, 689.7, 1224.3),
     Vector3.new(-386.7, 1041.0, 2044.6),
     Vector3.new(-753.9,1525.0,2057.5),
-    Vector3.new(-480.6, 1633.0, 2283.2,
+    Vector3.new(-480.6, 1633.0, 2283.2),
     Vector3.new(-86.4, 1929.0, 2113.9),
-    Vector3.new(4.1, 2493.0, 2043.8),
+    Vector3.new(4.1, 2493.0, 2043.8)
 }
 
 -- Delay untuk setiap teleport (dalam detik)
