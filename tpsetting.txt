@@ -910,6 +910,7 @@ local function rejoin()
 end
 
 -- Fungsi untuk melakukan teleport ke semua titik yang disimpan secara berurutan
+-- Fungsi untuk melakukan teleport ke semua titik yang disimpan secara berurutan
 local function teleportAll()
     local delayTime = math.max(0.1, tonumber(timeBox.Text) or 1)
     local repeatCount = math.max(1, tonumber(repeatBox.Text) or 1)
@@ -937,33 +938,39 @@ local function teleportAll()
                 local root = char:WaitForChild("HumanoidRootPart")
                 root.CFrame = CFrame.new(pos)
 
-                -- cek apakah ini benar-benar teleport terakhir dari semua repeat
-                local isLastOverall = (repeatIndex == repeatCount) and (i == #sortedNames)
-
-                if isLastOverall then
-                    -- sudah finish semua
-                    showNotification("Teleport", "Berhasil Summit 🥰", 2)
-                    task.wait(2)
-
-                    if isAutoRespawnEnabled then
-                        autoRespawn()  -- respawn dulu
-                    end
-
-                    if isAutoRejoinEnabled then
-                        task.wait(3)  -- kasih jeda biar respawn selesai
-                        rejoin()
-                    end
-                else
-                    -- masih ada teleport berikutnya
-                    showNotification("Teleport", "Berhasil teleport ke "..tpName, delayTime)
+                -- Tampilkan notifikasi untuk setiap teleport
+                showNotification("Teleport", "Berhasil teleport ke "..tpName, 1)
+                
+                -- Tunggu delayTime kecuali untuk teleport terakhir dalam putaran
+                if i < #sortedNames then
                     task.wait(delayTime)
                 end
             end
         end
 
-        if repeatIndex < repeatCount then
-            task.wait(0.5) -- jeda antar repeat
+        -- Cek apakah ini adalah putaran terakhir
+        local isLastRepeat = (repeatIndex == repeatCount)
+        
+        -- Jika ini bukan putaran terakhir, lakukan auto respawn jika diaktifkan
+        if not isLastRepeat and isAutoRespawnEnabled then
+            showNotification("Auto Respawn", "Memulai respawn...", 2)
+            autoRespawn()
+            task.wait(3) -- Tunggu proses respawn selesai sebelum melanjutkan ke putaran berikutnya
         end
+        
+        -- Tunggu jeda antar putaran (kecuali untuk putaran terakhir)
+        if not isLastRepeat then
+            task.wait(0.5)
+        end
+    end
+
+    -- Setelah semua putaran selesai, lakukan auto rejoin jika diaktifkan
+    if isAutoRejoinEnabled then
+        showNotification("Auto Rejoin", "Memulai rejoin dalam 3 detik...", 3)
+        task.wait(3)
+        rejoin()
+    else
+        showNotification("Teleport", "Semua teleport selesai!", 2)
     end
 end
 
