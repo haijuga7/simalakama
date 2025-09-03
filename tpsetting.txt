@@ -938,9 +938,6 @@ local function teleportAll()
                 local root = char:WaitForChild("HumanoidRootPart")
                 root.CFrame = CFrame.new(pos)
 
-                -- Tampilkan notifikasi untuk setiap teleport
-                showNotification("Teleport", "Berhasil teleport ke "..tpName, 1)
-                
                 -- Tunggu delayTime kecuali untuk teleport terakhir dalam putaran
                 if i < #sortedNames then
                     task.wait(delayTime)
