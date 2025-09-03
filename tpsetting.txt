@@ -950,7 +950,7 @@ local function teleportAll()
         
         -- Jika ini bukan putaran terakhir, lakukan auto respawn jika diaktifkan
         if isAutoRespawnEnabled then
-            showNotification("Auto Respawn", "Memulai respawn. ke-"..repeatIndex, 2)
+            showNotification("Auto Respawn", "Memulai respawn. ("..repeatIndex.."/"..repeatCount..")", 2)
             autoRespawn()
             task.wait(1.7) -- Tunggu proses respawn selesai sebelum melanjutkan ke putaran berikutnya
         end
