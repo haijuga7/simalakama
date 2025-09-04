@@ -942,6 +942,7 @@ local function teleportAll()
                 local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
                 local root = char:WaitForChild("HumanoidRootPart")
                 root.CFrame = CFrame.new(pos)
+                showNotification("Auto Teleport", "Sisa Teleport. ("..i.."/"..#sortedNames..")", 2)
 
                 -- Tunggu delayTime kecuali untuk teleport terakhir dalam putaran
             end
