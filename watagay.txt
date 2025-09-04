@@ -1,50 +1,45 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
+local Debris = game:GetService("Debris")
+local StarterGui = game:GetService("StarterGui")
+
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-local SoundService = game:GetService("SoundService")
-local StarterGui = game:GetService("StarterGui") -- Untuk notifikasi
 
 -- Daftar posisi teleport (ganti dengan posisi yang Anda inginkan)
-local teleportPositions = {
-    Vector3.new(-421.2, 193.4, 556.3),
-    Vector3.new(-626.0, 580.8, 1136.1),
-    Vector3.new(-900.1, 692.0, 1221.9),
-    Vector3.new(-387.0, 1043.1, 2046.2),
-    Vector3.new(-754.6, 1527.1, 2059.8),
-    Vector3.new(-479.4, 1635.1, 2284.2),
-    Vector3.new(-85.3, 1932.1, 2114.2),
-    Vector3.new(4.1, 2495.0, 2043.8)
-}
-
--- Delay untuk setiap teleport (dalam detik)
-local teleportDelays = {
-    60,
-    60,
-    60,
-    60,
-    60,
-    15,
-    10,
-    3
+local teleportSequence = {
+    {pos = Vector3.new(-421.2, 193.4, 556.3), waitTime = 60, notif = "teleport 1 time sleep 60"},
+    {pos = Vector3.new(-626.0, 580.8, 1136.1), waitTime = 65, notif = "teleport 2 time sleep 60"},
+    {pos = Vector3.new(-901.2, 693.0, 1223.2), waitTime = 70, notif = "teleport 3 time sleep 60"},
+    {pos = Vector3.new(-387.0, 1043.1, 2046.2), waitTime = 65, notif = "teleport 4 time sleep 60"},
+    {pos = Vector3.new(-754.6, 1527.1, 2059.8), waitTime = 65, notif = "teleport 5 time sleep 60"},
+    {pos = Vector3.new(-479.4, 1635.1, 2284.2), waitTime = 16, notif = "teleport 6 time sleep 20"},
+    {pos = Vector3.new(-85.3, 1932.1, 2114.2), waitTime = 14, notif = "teleport 7 time sleep 10"},
+    {pos = Vector3.new(4.1, 2495.0, 2043.8), waitTime = 5, notif = "telah summit auto respawn akan aktif"}
 }
 
 local function playNotificationSound()
-    -- Membuat sound sederhana menggunakan sinyal audio dasar
     local sound = Instance.new("Sound")
-    sound.SoundId = "rbxasset://sounds/electronicpingshort.wav" -- Sound default Roblox
-    sound.Volume = 0.5
+    sound.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+    sound.Volume = 3
     sound.Parent = workspace
     sound:Play()
-    
-    -- Membersihkan sound setelah selesai diputar
-    game:GetService("Debris"):AddItem(sound, 2)
+    Debris:AddItem(sound, 2)
+end
+
+-- Fungsi menampilkan notifikasi
+local function showNotification(title, text, duration)
+    StarterGui:SetCore("SendNotification", {
+        Title = title or "Notification",
+        Text = text or "",
+        Duration = duration or 3
+    })
 end
 
 -- Variabel kontrol
 local isTeleporting = false
-local teleportCoroutine = nil
 
 -- Membuat GUI
 local teleportGui = Instance.new("ScreenGui")
@@ -81,11 +76,27 @@ headerCorner.Parent = header
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 1, 0)
 title.BackgroundTransparency = 1
-title.Text = "Teleport Controller"
+title.Text = "Yagataw Teleport"
 title.Font = Enum.Font.GothamBold
 title.TextSize = 14
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Parent = header
+
+-- Tombol Close GUI
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0,25,0,25)
+CloseButton.Position = UDim2.new(1,-30,0,2.5) -- 30 pixel dari kanan, 2.5 pixel dari atas
+CloseButton.BackgroundColor3 = Color3.fromRGB(200,60,60) -- Warna merah
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255,255,255) -- Teks putih
+CloseButton.Font = Enum.Font.Gotham
+CloseButton.TextSize = 12
+CloseButton.Parent = header
+
+-- Sudut membulat untuk Tombol Close
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0,12.5)
+CloseCorner.Parent = CloseButton
 
 -- Toggle untuk teleport
 local toggleFrame = Instance.new("Frame")
@@ -133,25 +144,10 @@ local rejoinCorner = Instance.new("UICorner")
 rejoinCorner.CornerRadius = UDim.new(0, 8)
 rejoinCorner.Parent = rejoinButton
 
--- Fungsi Notifikasi
-local function showNotification(title, text, duration)
-    StarterGui:SetCore("SendNotification", {
-        Title = title or "Notification",
-        Text = text or "",
-        Duration = duration or 3,
-        -- Tidak menyertakan Button1 berarti tidak ada tombol
-    })
-end
-
 -- Fungsi untuk auto respawn
 local function autoRespawn()
-    local character = LocalPlayer.Character
-    if character then
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.Health = 0
-        end
-    end
+    LocalPlayer.Character:BreakJoints()
+    
     wait(3) -- Tunggu respawn
 end
 
@@ -167,7 +163,6 @@ local function teleportToPosition(position)
         local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
         if humanoidRootPart then
             humanoidRootPart.CFrame = CFrame.new(position)
-            playNotificationSound()
         end
     end
 end
@@ -178,50 +173,25 @@ local function startTeleportLoop()
     toggleButton.BackgroundColor3 = Color3.fromRGB(60, 200, 60)
     toggleButton.Text = "ON"
     
-    teleportCoroutine = coroutine.create(function()
-        while isTeleporting do
-            wait(2)
-            autoRespawn()
-            
-            wait(60)
-            showNotification("Teleport", "teleport 1 time sleep 60", 60)
-            teleportToPosition(Vector3.new(-421.2, 193.4, 556.3))
-            
-            wait(65)
-            showNotification("Teleport", "teleport 2 time sleep 60", 60)
-            teleportToPosition(Vector3.new(-626.0, 580.8, 1136.1))
-            
-            wait(70)
-            showNotification("Teleport", "teleport 3 time sleep 60", 60)
-            teleportToPosition(Vector3.new(-900.1, 692.0, 1221.9))
-            
-            wait(65)
-            showNotification("Teleport", "teleport 4 time sleep 60", 60)
-            teleportToPosition(Vector3.new(-387.0, 1043.1, 2046.2))
-            
-            wait(65)
-            showNotification("Teleport", "teleport 5 time sleep 60", 60)
-            teleportToPosition(Vector3.new(-754.6, 1527.1, 2059.8))
-            
-            wait(15)
-            showNotification("Teleport", "teleport 6 time sleep 20", 20)
-            teleportToPosition(Vector3.new(-479.4, 1635.1, 2284.2))
-            
-            wait(13)
-            showNotification("Teleport", "teleport 7 time sleep 10", 10)
-            teleportToPosition(Vector3.new(-85.3, 1932.1, 2114.2))
-            
-            wait(5)
-            showNotification("Teleport", "telah summit auto respawn akan aktif", 5)
-            teleportToPosition(Vector3.new(4.1, 2495.0, 2043.8))
-            
-            autoRespawn()
-        end
-    end)
-    
-    coroutine.resume(teleportCoroutine)
-end
+    while isTeleporting do
+        wait(2)
+        autoRespawn()
 
+        for _, data in ipairs(teleportSequence) do
+            if not isTeleporting then break end
+            showNotification("Teleport", data.notif, data.waitTime)
+            wait(data.waitTime)
+            teleportToPosition(data.pos)
+            playNotificationSound()
+        end
+
+        if not isTeleporting then break end
+        wait(1)
+        autoRespawn()
+    end
+    print("[TeleportController] teleportLoop ended")
+end
+            
 -- Fungsi untuk menghentikan teleport loop
 local function stopTeleportLoop()
     isTeleporting = false
@@ -242,6 +212,8 @@ end)
 rejoinButton.MouseButton1Click:Connect(function()
     rejoinGame()
 end)
+
+CloseButton.MouseButton1Click:Connect(function() teleportGui:Destroy() end) -- Tombol Close (menghancurkan GUI)
 
 -- Drag functionality
 local dragging = false
