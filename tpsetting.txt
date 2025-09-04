@@ -933,15 +933,15 @@ local function teleportAll()
             local posStr = teleportData[tpName]
             local x,y,z = string.match(posStr,"([^,]+),([^,]+),([^,]+)")
             if x and y and z then
+                if i < #sortedNames then
+                    task.wait(delayTime)
+                end
                 local pos = Vector3.new(tonumber(x),tonumber(y),tonumber(z))
                 local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
                 local root = char:WaitForChild("HumanoidRootPart")
                 root.CFrame = CFrame.new(pos)
 
                 -- Tunggu delayTime kecuali untuk teleport terakhir dalam putaran
-                if i < #sortedNames then
-                    task.wait(delayTime)
-                end
             end
         end
 
