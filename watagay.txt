@@ -179,7 +179,7 @@ local function startTeleportLoop()
             teleportToPosition(Vector3.new(-626.0, 580.8, 1136.1))
             
             wait(60)
-            showNotification("Teleport", "teleport 3 time sleep 60", 60)
+            showNotification("Teleport", "teleport 3 time sleep 65", 65)
             teleportToPosition(Vector3.new(-900.1, 692.0, 1221.9))
             
             wait(60)
