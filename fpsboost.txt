@@ -46,8 +46,7 @@ local function showNotification(title, text, duration)
     StarterGui:SetCore("SendNotification", {
         Title = title,
         Text = text,
-        Duration = duration or 5,
-        Button1 = "Okay"
+        Duration = duration or 5
     })
 end
 
@@ -59,25 +58,25 @@ local function optimizeGraphics()
     -- Set FPS
     local success, err = pcall(function()
         if setfpscap then
-            showNotification("FPS Booster", "Setting FPS to " .. _G.Settings.Graphics.FPS, 2)
+            showNotification("FPS Booster", "Setting FPS to " .. _G.Settings.Graphics.FPS, 1)
             setfpscap(_G.Settings.Graphics.FPS)
         else
-            showNotification("FPS Booster", "FPS Cap (setfpscap) not supported by executor.", 3)
+            showNotification("FPS Booster", "FPS Cap (setfpscap) not supported by executor.", 1)
         end
     end)
     if not success then
-        showNotification("FPS Booster", "Error setting FPS: " .. err, 3)
+        showNotification("FPS Booster", "Error setting FPS: " .. err, 1)
     end
     task.wait(0.5)
     
     -- Optimize rendering
-    showNotification("FPS Booster", "Optimizing rendering quality...", 2)
+    showNotification("FPS Booster", "Optimizing rendering quality...", 1)
     settings().Rendering.QualityLevel = _G.Settings.Graphics.QualityLevel
     settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level01
     task.wait(0.5)
     
     -- Optimize lighting
-    showNotification("FPS Booster", "Removing shadows and fog...", 2)
+    showNotification("FPS Booster", "Removing shadows and fog...", 1)
     Lighting.GlobalShadows = false
     Lighting.ShadowSoftness = 0
     Lighting.FogEnd = 9e9
@@ -85,7 +84,7 @@ local function optimizeGraphics()
     
     -- Optimize terrain
     if Terrain then
-        showNotification("FPS Booster", "Optimizing water effects...", 2)
+        showNotification("FPS Booster", "Optimizing water effects...", 1)
         Terrain.WaterWaveSize = _G.Settings.Graphics.WaterQuality
         Terrain.WaterWaveSpeed = 0
         Terrain.WaterReflectance = 0
@@ -93,14 +92,14 @@ local function optimizeGraphics()
         if pcall(sethiddenproperty, Terrain, "Decoration", false) then
             -- Decoration hidden successfully
         else
-            showNotification("FPS Booster", "Terrain decoration removal not supported.", 2)
+            showNotification("FPS Booster", "Terrain decoration removal not supported.", 1)
         end
         task.wait(0.5)
     end
 
     -- Aggressively remove Sky, Atmosphere, and Clouds
     if _G.Settings.Graphics.RemoveSky then
-        showNotification("FPS Booster", "Removing sky elements...", 2)
+        showNotification("FPS Booster", "Removing sky elements...", 1)
         for _, v in pairs(Lighting:GetDescendants()) do
             if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("Clouds") then
                 v:Destroy()
@@ -113,6 +112,19 @@ local function optimizeGraphics()
         end
         task.wait(0.5)
     end
+end
+
+-- Fungsi bantu untuk cek apakah instance berada di dalam objek dengan nama tertentu (obor, senter, dll)
+local function isInAllowedLightSource(instance)
+    local current = instance
+    while current and current.Parent do
+        local name = current.Name:lower()
+        if name:find("torch") or name:find("obor") or name:find("flashlight") or name:find("senter") or name:find("light") then
+            return true
+        end
+        current = current.Parent
+    end
+    return false
 end
 
 local function optimizeInstance(instance)
@@ -156,23 +168,26 @@ local function optimizeInstance(instance)
         return
     end
 
-    -- New: Remove Lights
+    -- Remove Lights (tetapi kecuali yang berasal dari obor/senter)
     if _G.Settings.Optimizations.RemoveLights and (instance:IsA("SpotLight") or instance:IsA("PointLight") or instance:IsA("SurfaceLight")) then
-        instance.Enabled = false -- Disable lights
-        instance:Destroy() -- Or destroy them if disabling isn't enough
+        if not isInAllowedLightSource(instance) then
+            instance.Enabled = false
+            -- Jika ingin menghapus lampu yang tidak penting, uncomment baris berikut:
+            -- instance:Destroy()
+        end
         return
     end
 
-    -- New: Remove Beams
+    -- Remove Beams
     if _G.Settings.Optimizations.RemoveEffects and instance:IsA("Beam") then
         instance.Enabled = false
         return
     end
 
-    -- New: Remove Decals
+    -- Remove Decals
     if _G.Settings.Optimizations.RemoveDecals and instance:IsA("Decal") then
         instance.Transparency = 1
-        instance:Destroy() -- Destroy decals
+        instance:Destroy()
         return
     end
     
@@ -182,7 +197,7 @@ local function optimizeInstance(instance)
         instance.Reflectance = 0
     end
 
-    -- Also remove Sky, Atmosphere, Clouds if they are added dynamically
+    -- Remove Sky, Atmosphere, Clouds jika diaktifkan
     if _G.Settings.Graphics.RemoveSky and (instance:IsA("Sky") or instance:IsA("Atmosphere") or instance:IsA("Clouds")) then
         instance:Destroy()
         return
@@ -192,34 +207,34 @@ end
 -- Initialize optimizations
 local function initialize()
     -- Show initial loader
-    showNotification("FPS Booster", "Loading FPS Booster...", math.huge)
+    showNotification("FPS Booster", "Loading FPS Booster...", 1)
     task.wait(3)
 
     local success, err = pcall(function()
         optimizeGraphics()
         
         -- Optimize existing instances
-        showNotification("FPS Booster", "Optimizing existing game objects...", 2)
+        showNotification("FPS Booster", "Optimizing existing game objects...", 1)
         for _, instance in pairs(game:GetDescendants()) do
             optimizeInstance(instance)
         end
         task.wait(0.5)
         
         -- Optimize new instances
-        showNotification("FPS Booster", "Monitoring new game objects...", 2)
+        showNotification("FPS Booster", "Monitoring new game objects...", 1)
         game.DescendantAdded:Connect(optimizeInstance)
         task.wait(0.5)
         
         -- Final progress notification
-        showNotification("FPS Booster", "Optimizations completed successfully!", 2)
+        showNotification("FPS Booster", "Optimizations completed successfully!", 1)
         task.wait(2)
 
         -- Show final message
-        showNotification("FPS Booster", "FPS BOOSTED BY BLOXSTORE", math.huge)
+        showNotification("FPS Booster", "FPS BOOSTED BY BLOXSTORE", 1)
 
     end)
     if not success then
-        showNotification("FPS Booster", "Script Failed: " .. err, 5)
+        showNotification("FPS Booster", "Script Failed: " .. err, 1)
     end
 end
 
