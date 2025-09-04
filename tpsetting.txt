@@ -951,6 +951,7 @@ local function teleportAll()
         local isLastRepeat = (repeatIndex == repeatCount)
         
         -- Jika ini bukan putaran terakhir, lakukan auto respawn jika diaktifkan
+        showNotification("Teleport", "Sisa retry. ("..repeatIndex.."/"..repeatCount..")", 2)
         if isAutoRespawnEnabled then
             showNotification("Auto Respawn", "Memulai respawn. ("..repeatIndex.."/"..repeatCount..")", 2)
             autoRespawn()
