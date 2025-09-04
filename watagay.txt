@@ -8,6 +8,14 @@ local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
+-- Anti AFK
+local VirtualUser = game:GetService("VirtualUser")
+Players.LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+    print("[TeleportController] Anti AFK triggered")
+end)
+
 -- Daftar posisi teleport (ganti dengan posisi yang Anda inginkan)
 local teleportSequence = {
     {pos = Vector3.new(-421.2, 193.4, 556.3), waitTime = 55, notif = "teleport 1 time sleep 60"},
