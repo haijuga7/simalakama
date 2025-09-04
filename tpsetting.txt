@@ -935,6 +935,8 @@ local function teleportAll()
             if x and y and z then
                 if i < #sortedNames then
                     task.wait(delayTime)
+                else
+                    task.wait(1)
                 end
                 local pos = Vector3.new(tonumber(x),tonumber(y),tonumber(z))
                 local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
