@@ -198,7 +198,7 @@ local function startTeleportLoop()
             showNotification("Teleport", "teleport 7 time sleep 10", 10)
             teleportToPosition(Vector3.new(-85.3, 1932.1, 2114.2))
             
-            wait(3)
+            wait(5)
             showNotification("Teleport", "telah summit auto respawn akan aktif", 5)
             teleportToPosition(Vector3.new(4.1, 2495.0, 2043.8))
             
