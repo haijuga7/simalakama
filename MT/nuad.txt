@@ -206,8 +206,11 @@ end
 -- Toggle button functionality
 toggleButton.MouseButton1Click:Connect(function()
     if isTeleporting then
+        showNotification("Teleport", "Teleport Di aktifkan", 3)
         stopTeleportLoop()
-    else
+
+        elseshowNotification("Summit", "Sudah Summit Ya..", 3)
+        
         startTeleportLoop()
     end
 end)
