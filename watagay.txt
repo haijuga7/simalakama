@@ -18,14 +18,14 @@ end)
 
 -- Daftar posisi teleport (ganti dengan posisi yang Anda inginkan)
 local teleportSequence = {
-    {pos = Vector3.new(-421.2, 193.4, 556.3), waitTime = 55, notif = "teleport (1/8)"},
-    {pos = Vector3.new(-626.0, 580.8, 1136.1), waitTime = 60, notif = "Teleport (2/8)"},
-    {pos = Vector3.new(-901.2, 693.0, 1223.2), waitTime = 65, notif = "Teleport (3/8)"},
-    {pos = Vector3.new(-387.0, 1043.1, 2046.2), waitTime = 62, notif = "Teleport (4/8)"},
-    {pos = Vector3.new(-754.6, 1527.1, 2059.8), waitTime = 60, notif = "Teleport (5/8)"},
-    {pos = Vector3.new(-479.4, 1635.1, 2284.2), waitTime = 15, notif = "Teleport (6/8)"},
-    {pos = Vector3.new(-85.3, 1932.1, 2114.2), waitTime = 13, notif = "Teleport (7/8)"},
-    {pos = Vector3.new(4.1, 2495.0, 2043.8), waitTime = 4, notif = "Teleport (8/8)"}
+    {pos = Vector3.new(-421.2, 193.4, 556.3), waitTime = 55, notif = "(1/8)"},
+    {pos = Vector3.new(-626.0, 580.8, 1136.1), waitTime = 60, notif = "(2/8)"},
+    {pos = Vector3.new(-901.2, 693.0, 1223.2), waitTime = 65, notif = "(3/8)"},
+    {pos = Vector3.new(-387.0, 1043.1, 2046.2), waitTime = 62, notif = "(4/8)"},
+    {pos = Vector3.new(-754.6, 1527.1, 2059.8), waitTime = 60, notif = "(5/8)"},
+    {pos = Vector3.new(-479.4, 1635.1, 2284.2), waitTime = 15, notif = "(6/8)"},
+    {pos = Vector3.new(-85.3, 1932.1, 2114.2), waitTime = 13, notif = "(7/8)"},
+    {pos = Vector3.new(4.1, 2495.0, 2043.8), waitTime = 4, notif = "(8/8)"}
 }
 
 local function playNotificationSound()
