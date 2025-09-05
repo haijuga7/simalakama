@@ -19,7 +19,7 @@ end)
 -- Daftar posisi teleport (ganti dengan posisi yang Anda inginkan)
 local teleportSequence = {
     {pos = Vector3.new(-421.2, 193.4, 556.3), waitTime = 60, notif = "(1/8)"},
-    {pos = Vector3.new(-626.0, 580.8, 1136.1), waitTime = 60, notif = "(2/8)"},
+    {pos = Vector3.new(-626.0, 580.8, 1136.1), waitTime = 62, notif = "(2/8)"},
     {pos = Vector3.new(-901.2, 693.0, 1223.2), waitTime = 65, notif = "(3/8)"},
     {pos = Vector3.new(-387.0, 1043.1, 2046.2), waitTime = 62, notif = "(4/8)"},
     {pos = Vector3.new(-754.6, 1527.1, 2059.8), waitTime = 62, notif = "(5/8)"},
