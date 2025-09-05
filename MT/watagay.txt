@@ -209,10 +209,10 @@ end
 -- Toggle button functionality
 toggleButton.MouseButton1Click:Connect(function()
     if isTeleporting then
-        showNotification("Teleport", Auto teleport hidup, 5)
+        showNotification("Teleport", "Auto teleport hidup", 5)
         stopTeleportLoop()
     else
-        showNotification("Teleport", Auto teleport mati, 5)
+        showNotification("Teleport", "Auto teleport mati", 5)
         startTeleportLoop()
     end
 end)
