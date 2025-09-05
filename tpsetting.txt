@@ -952,7 +952,7 @@ local function teleportAll()
         local isLastRepeat = (repeatIndex == repeatCount)
         
         -- Jika ini bukan putaran terakhir, lakukan auto respawn jika diaktifkan
-        
+        task.wait(delayTime)
         if isAutoRespawnEnabled then
             showNotification("Auto Respawn", "Memulai respawn. ("..repeatIndex.."/"..repeatCount..")", 2)
             autoRespawn()
