@@ -402,11 +402,11 @@ end)
 
 -- Load modules
 local modules = {
-    walkspeed = "https://raw.githubusercontent.com/yourusername/yourrepo/main/walkspeed.lua",
-    headlamp = "https://raw.githubusercontent.com/yourusername/yourrepo/main/headlamp.lua",
-    brightmode = "https://raw.githubusercontent.com/yourusername/yourrepo/main/brightmode.lua",
-    godmode = "https://raw.githubusercontent.com/yourusername/yourrepo/main/godmode.lua",
-    infjump = "https://raw.githubusercontent.com/yourusername/yourrepo/main/infjump.lua"
+    walkspeed = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/nyoba/walkspeed.lua",
+    headlamp = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/nyoba/headlamp.lua",
+    brightmode = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/nyoba/brightmode.lua",
+    godmode = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/nyoba/godmode.lua",
+    infjump = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/nyoba/infjump.lua"
 }
 
 local function loadModule(name, url)
