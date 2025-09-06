@@ -80,30 +80,46 @@ local Modules = {}
 -- Muat UI terlebih dahulu karena modul lain bergantung padanya
 Modules.UI = loadModule(ModuleURLs.UI)
 if Modules.UI then
+    print("GUI sedang di load")
     Modules.UI.Initialize(SharedState)
+    print("GUI berhasil di load")
     
     -- Muat modul-modul lainnya
+    print("walkspeed")
     Modules.WalkSpeed = loadModule(ModuleURLs.WalkSpeed)
     if Modules.WalkSpeed then Modules.WalkSpeed.Initialize(SharedState) end
-    
+    print("berhasil")
+
+    print("headlamp")
     Modules.Headlamp = loadModule(ModuleURLs.Headlamp)
     if Modules.Headlamp then Modules.Headlamp.Initialize(SharedState) end
-    
+    print("berhasil")
+
+    print("bright")
     Modules.BrightMode = loadModule(ModuleURLs.BrightMode)
     if Modules.BrightMode then Modules.BrightMode.Initialize(SharedState) end
-    
+    print("berhasil")
+
+    print("godmode")
     Modules.GodMode = loadModule(ModuleURLs.GodMode)
     if Modules.GodMode then Modules.GodMode.Initialize(SharedState) end
-    
+    print("berhasil")
+
+    print("infjump")
     Modules.InfinityJump = loadModule(ModuleURLs.InfinityJump)
     if Modules.InfinityJump then Modules.InfinityJump.Initialize(SharedState) end
-    
+    print("berhasil")
+
+    print("teleport")
     Modules.Teleport = loadModule(ModuleURLs.Teleport)
     if Modules.Teleport then Modules.Teleport.Initialize(SharedState) end
+    print("berhasil")
     
     -- Muat CharacterHandler terakhir karena bergantung pada modul lainnya
+    print("character")
     Modules.CharacterHandler = loadModule(ModuleURLs.CharacterHandler)
     if Modules.CharacterHandler then Modules.CharacterHandler.Initialize(SharedState, Modules) end
+    print("berhasil")
     
     print("Player Settings GUI loaded successfully!")
 else
