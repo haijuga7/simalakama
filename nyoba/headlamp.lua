@@ -33,8 +33,8 @@ function module.createHeadlamp()
         attachment.Position = Vector3.new(0, 0.5, 0)
 
         headlampLight = Instance.new("PointLight")
-        headlampLight.Brightness = 3
-        headlampLight.Range = 20
+        headlampLight.Brightness = 3.5
+        headlampLight.Range = 35
         headlampLight.Color = Color3.fromRGB(255, 240, 200)
         headlampLight.Parent = attachment
         
