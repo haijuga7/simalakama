@@ -325,8 +325,8 @@ repeatPlusBtn.Parent = repeatControls
 
 local saveBtn = Instance.new("TextButton")
 saveBtn.Text = "S"
-saveBtn.Size = UDim2.new(0.15, 0, 1, 0)
-saveBtn.Position = UDim2.new(0.85, 0, 0, 0)
+saveBtn.Size = UDim2.new(0.17, 0, 1, 0)
+saveBtn.Position = UDim2.new(0.83, 0, 0, 0)
 saveBtn.BackgroundColor3 = Color3.fromRGB(0,122,255)
 saveBtn.TextColor3 = Color3.fromRGB(255,255,255)
 saveBtn.Font = Enum.Font.GothamBold
@@ -346,6 +346,47 @@ Instance.new("UICorner", tpAllButton).CornerRadius = UDim.new(0,4)
 tpAllButton.LayoutOrder = 3
 tpAllButton.Parent = controlsScroll
 
+-- === Auto Respawn ===
+local autoRespawnControls = Instance.new("Frame")
+autoRespawnControls.Size = UDim2.new(1, 0, 0, 25)
+autoRespawnControls.BackgroundTransparency = 1
+autoRespawnControls.LayoutOrder = 5
+autoRespawnControls.Parent = controlsScroll
+
+local autoRespawnLabel = Instance.new("TextLabel")
+autoRespawnLabel.Text = "Auto Respawn:"
+autoRespawnLabel.Size = UDim2.new(0.74, 0, 1, 0)
+autoRespawnLabel.BackgroundTransparency = 1
+autoRespawnLabel.TextColor3 = Color3.fromRGB(255,255,255)
+autoRespawnLabel.Font = Enum.Font.GothamBold
+autoRespawnLabel.TextSize = 12
+autoRespawnLabel.TextXAlignment = Enum.TextXAlignment.Left
+autoRespawnLabel.Parent = autoRespawnControls
+
+local autoRespawnSwitch = Instance.new("TextButton")
+autoRespawnSwitch.Size = UDim2.new(0.25, 0, 1, 0)
+autoRespawnSwitch.Position = UDim2.new(0.75, 0, 0, 0)
+autoRespawnSwitch.BackgroundColor3 = Color3.fromRGB(150,50,50)
+autoRespawnSwitch.Text = "OFF"
+autoRespawnSwitch.TextColor3 = Color3.fromRGB(255,255,255)
+autoRespawnSwitch.Font = Enum.Font.GothamBold
+autoRespawnSwitch.TextSize = 12
+Instance.new("UICorner", autoRespawnSwitch).CornerRadius = UDim.new(0,4)
+autoRespawnSwitch.Parent = autoRespawnControls
+
+autoRespawnSwitch.MouseButton1Click:Connect(function()
+    isAutoRespawnEnabled = not isAutoRespawnEnabled
+    if isAutoRespawnEnabled then
+        autoRespawnSwitch.Text = "ON"
+        autoRespawnSwitch.BackgroundColor3 = Color3.fromRGB(50,150,50)
+        showNotification("Auto reSpawn", "Berhasil diaktifkan", 1)
+    else
+        autoRespawnSwitch.Text = "OFF"
+        autoRespawnSwitch.BackgroundColor3 = Color3.fromRGB(150,50,50)
+        showNotification("Auto reSpawn", "Berhasil Dinonaktifkan", 1)
+    end
+end)
+
 -- === Rejoin + Auto Rejoin ===
 local rejoinControls = Instance.new("Frame")
 rejoinControls.Size = UDim2.new(1, 0, 0, 25)
@@ -354,7 +395,7 @@ rejoinControls.LayoutOrder = 4
 rejoinControls.Parent = controlsScroll
 
 local rejoinBtn = Instance.new("TextButton")
-rejoinBtn.Size = UDim2.new(0.7, 0, 1, 0)
+rejoinBtn.Size = UDim2.new(0.74, 0, 1, 0)
 rejoinBtn.BackgroundColor3 = Color3.fromRGB(255,140,0)
 rejoinBtn.Text = "Rejoin"
 rejoinBtn.TextColor3 = Color3.fromRGB(255,255,255)
@@ -384,47 +425,6 @@ autoRejoinSwitch.MouseButton1Click:Connect(function()
         autoRejoinSwitch.Text = "OFF"
         autoRejoinSwitch.BackgroundColor3 = Color3.fromRGB(150,50,50)
         showNotification("Auto reJoin", "Berhasil Dinonaktifkan", 1)
-    end
-end)
-
--- === Auto Respawn ===
-local autoRespawnControls = Instance.new("Frame")
-autoRespawnControls.Size = UDim2.new(1, 0, 0, 25)
-autoRespawnControls.BackgroundTransparency = 1
-autoRespawnControls.LayoutOrder = 5
-autoRespawnControls.Parent = controlsScroll
-
-local autoRespawnLabel = Instance.new("TextLabel")
-autoRespawnLabel.Text = "Auto Respawn:"
-autoRespawnLabel.Size = UDim2.new(0.6, 0, 1, 0)
-autoRespawnLabel.BackgroundTransparency = 1
-autoRespawnLabel.TextColor3 = Color3.fromRGB(255,255,255)
-autoRespawnLabel.Font = Enum.Font.GothamBold
-autoRespawnLabel.TextSize = 12
-autoRespawnLabel.TextXAlignment = Enum.TextXAlignment.Left
-autoRespawnLabel.Parent = autoRespawnControls
-
-local autoRespawnSwitch = Instance.new("TextButton")
-autoRespawnSwitch.Size = UDim2.new(0.3, 0, 1, 0)
-autoRespawnSwitch.Position = UDim2.new(0.65, 0, 0, 0)
-autoRespawnSwitch.BackgroundColor3 = Color3.fromRGB(150,50,50)
-autoRespawnSwitch.Text = "OFF"
-autoRespawnSwitch.TextColor3 = Color3.fromRGB(255,255,255)
-autoRespawnSwitch.Font = Enum.Font.GothamBold
-autoRespawnSwitch.TextSize = 12
-Instance.new("UICorner", autoRespawnSwitch).CornerRadius = UDim.new(0,4)
-autoRespawnSwitch.Parent = autoRespawnControls
-
-autoRespawnSwitch.MouseButton1Click:Connect(function()
-    isAutoRespawnEnabled = not isAutoRespawnEnabled
-    if isAutoRespawnEnabled then
-        autoRespawnSwitch.Text = "ON"
-        autoRespawnSwitch.BackgroundColor3 = Color3.fromRGB(50,150,50)
-        showNotification("Auto reSpawn", "Berhasil diaktifkan", 1)
-    else
-        autoRespawnSwitch.Text = "OFF"
-        autoRespawnSwitch.BackgroundColor3 = Color3.fromRGB(150,50,50)
-        showNotification("Auto reSpawn", "Berhasil Dinonaktifkan", 1)
     end
 end)
 
