@@ -37,7 +37,10 @@ function module.createHeadlamp()
         headlampLight.Range = 20
         headlampLight.Color = Color3.fromRGB(255, 240, 200)
         headlampLight.Parent = attachment
+        
+        return true
     end
+    return false
 end
 
 function module.removeHeadlamp()
@@ -45,11 +48,27 @@ function module.removeHeadlamp()
         headlampLight:Destroy()
         headlampLight = nil
     end
+    
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Head") then
+        local head = char.Head
+        if head:FindFirstChild("HeadlampAttachment") then
+            head.HeadlampAttachment:Destroy()
+        end
+    end
 end
 
 function module.toggleHeadlamp()
     if headlampEnabled then
-        module.createHeadlamp()
+        -- Coba buat headlamp, jika gagal (karakter belum ada), tunggu karakter
+        if not module.createHeadlamp() then
+            -- Jika karakter belum ada, tunggu sampai karakter ada
+            local connection
+            connection = LocalPlayer.CharacterAdded:Connect(function()
+                module.createHeadlamp()
+                connection:Disconnect()
+            end)
+        end
     else
         module.removeHeadlamp()
     end
@@ -57,8 +76,27 @@ end
 
 function module.applySettings()
     if headlampEnabled then
-        module.createHeadlamp()
+        -- Coba buat headlamp, jika gagal (karakter belum ada), tunggu karakter
+        if not module.createHeadlamp() then
+            -- Jika karakter belum ada, tunggu sampai karakter ada
+            local connection
+            connection = LocalPlayer.CharacterAdded:Connect(function()
+                module.createHeadlamp()
+                connection:Disconnect()
+            end)
+        end
     end
+end
+
+-- Simpan status headlampEnabled agar bisa diakses dari luar
+function module.isEnabled()
+    return headlampEnabled
+end
+
+function module.setEnabled(enabled)
+    headlampEnabled = enabled
+    toggleButton(headlampToggle, headlampEnabled)
+    module.toggleHeadlamp()
 end
 
 return module
