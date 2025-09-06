@@ -1,99 +1,109 @@
--- Main Loader Script
-local Player = game:GetService("Players").LocalPlayer
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- MAIN LOADER SCRIPT
+-- Loader utama yang load semua module secara terpisah
 
--- Base URL GitHub
-local base = "https://raw.githubusercontent.com/haijuga7/simalakama/main/loader2"
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
--- Buat folder untuk menyimpan modul jika belum ada
-if not ReplicatedStorage:FindFirstChild("GUIModules") then
-    local GUIModules = Instance.new("Folder")
-    GUIModules.Name = "GUIModules"
-    GUIModules.Parent = ReplicatedStorage
+-- Cek apakah GUI sudah ada
+if LocalPlayer.PlayerGui:FindFirstChild("PlayerGuiUI") then
+    LocalPlayer.PlayerGui.PlayerGuiUI:Destroy()
+    wait(0.1)
 end
 
--- Daftar modul yang akan di-load
-local moduleScripts = {
-    MainGUI = base.."/GUI.lua",
-    WalkSpeedModule = base.."/WalkSpeed.lua",
-    HeadlampModule = base.."/Headlamp.lua",
-    BrightModeModule = base.."/BrightMode.lua",
-    GodModeModule = base.."/GodMode.lua",
-    InfinityJumpModule = base.."/InfinityJump.lua",
-    TeleportModule = base.."/Teleport.lua"
+print("🔄 Loading Player Settings...")
+
+-- URLs untuk setiap module (pastikan URL benar dan dapat diakses)
+local MODULES = {
+    Utils = "https://raw.githubusercontent.com/haijuga7/simalakama/main/loader3/Utils.lua",
+    GUI = "https://raw.githubusercontent.com/haijuga7/simalakama/main/loader3/GUI.lua", 
+    WalkSpeed = "https://raw.githubusercontent.com/haijuga7/simalakama/main/loader3/walkspeed.lua",
+    Headlamp = "https://raw.githubusercontent.com/haijuga7/simalakama/main/loader3/headlamp.lua", 
+    BrightMode = "https://raw.githubusercontent.com/haijuga7/simalakama/main/loader3/brightmode.lua",
+    GodMode = "https://raw.githubusercontent.com/haijuga7/simalakama/main/loader3/godmode.lua",
+    InfinityJump = "https://raw.githubusercontent.com/haijuga7/simalakama/main/loader3/infjump.lua",
+    Teleport = "https://raw.githubusercontent.com/haijuga7/simalakama/main/loader3/teleport.lua"
 }
 
--- Fungsi untuk load module
+-- Global storage untuk sharing antar module
+_G.PlayerSettings = _G.PlayerSettings or {
+    GUI = {},
+    Modules = {},
+    Services = {
+        Players = game:GetService("Players"),
+        UserInputService = game:GetService("UserInputService"),
+        RunService = game:GetService("RunService"),
+        Lighting = game:GetService("Lighting"),
+        LocalPlayer = game:GetService("Players").LocalPlayer
+    }
+}
+
+-- Function untuk load module
 local function loadModule(name, url)
-    print("Loading module: " .. name .. " from: " .. url)
-    
     local success, result = pcall(function()
-        local source = game:HttpGet(url, true)
-        if not source or source == "" then
-            error("Empty response from URL")
-        end
-        return loadstring(source)()
+        return game:HttpGet(url)
     end)
     
     if success then
-        print("Module " .. name .. " loaded successfully")
-        local module = Instance.new("ModuleScript")
-        module.Name = name
-        module.Source = "-- Module loaded from: " .. url .. "\n\nreturn " .. tostring(result)
-        module.Parent = ReplicatedStorage.GUIModules
-        return require(module)
+        local moduleFunc, err = loadstring(result)
+        if moduleFunc then
+            local success2, mod = pcall(moduleFunc)
+            if success2 then
+                _G.PlayerSettings.Modules[name] = mod
+                print("✅ " .. name .. " module loaded successfully!")
+                return true
+            else
+                warn("❌ Failed to initialize " .. name .. " module: " .. tostring(mod))
+            end
+        else
+            warn("❌ Failed to compile " .. name .. " module: " .. tostring(err))
+        end
     else
-        warn("Gagal load module " .. name .. ": " .. result)
-        return nil
+        warn("❌ Failed to fetch " .. name .. " module: " .. tostring(result))
+    end
+    return false
+end
+
+-- Load semua modules dengan urutan yang benar
+local loadOrder = {"Utils", "GUI", "WalkSpeed", "Headlamp", "BrightMode", "GodMode", "InfinityJump", "Teleport"}
+
+for _, moduleName in ipairs(loadOrder) do
+    local success = loadModule(moduleName, MODULES[moduleName])
+    if not success then
+        warn("⚠️ Could not load module: " .. moduleName)
     end
 end
 
--- Load semua module
-local modules = {}
-for name, url in pairs(moduleScripts) do
-    modules[name] = loadModule(name, url)
-end
-
--- Inisialisasi GUI utama jika berhasil di-load
-if modules.MainGUI then
-    print("Initializing GUI...")
-    modules.MainGUI.init(modules)
-else
-    warn("MainGUI module failed to load")
-end
-
--- Handle respawn untuk mempertahankan toggle state
-local function setupCharacterEvents()
-    local LocalPlayer = game:GetService("Players").LocalPlayer
-    
-    LocalPlayer.CharacterAdded:Connect(function(character)
-        character:WaitForChild("Humanoid")
-        
-        print("Character added, reapplying settings...")
-        
-        -- Terapkan semua fitur yang aktif
-        if modules.WalkSpeedModule and modules.WalkSpeedModule.reapply then
-            modules.WalkSpeedModule.reapply()
-        end
-        
-        if modules.HeadlampModule and modules.HeadlampModule.reapply then
-            modules.HeadlampModule.reapply()
-        end
-        
-        if modules.InfinityJumpModule and modules.InfinityJumpModule.reapply then
-            modules.InfinityJumpModule.reapply()
-        end
-        
-        if modules.GodModeModule and modules.GodModeModule.reapply then
-            modules.GodModeModule.reapply()
-        end
-        
-        if modules.BrightModeModule and modules.BrightModeModule.reapply then
-            modules.BrightModeModule.reapply()
-        end
+-- Initialize GUI setelah semua module loaded
+if _G.PlayerSettings.Modules.GUI and _G.PlayerSettings.Modules.GUI.Initialize then
+    local success, err = pcall(function()
+        _G.PlayerSettings.Modules.GUI.Initialize()
     end)
+    if not success then
+        warn("❌ Failed to initialize GUI: " .. tostring(err))
+    end
 end
 
-setupCharacterEvents()
+-- Initialize semua feature modules
+for _, moduleName in ipairs({"WalkSpeed", "Headlamp", "BrightMode", "GodMode", "InfinityJump", "Teleport"}) do
+    local module = _G.PlayerSettings.Modules[moduleName]
+    if module and module.Initialize then
+        local success, err = pcall(function()
+            module.Initialize()
+        end)
+        if not success then
+            warn("❌ Failed to initialize " .. moduleName .. ": " .. tostring(err))
+        end
+    end
+end
 
-print("Loader script executed successfully")
+-- Keybind untuk toggle (Insert key)
+local UserInputService = game:GetService("UserInputService")
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.Insert then
+        if _G.PlayerSettings.GUI and _G.PlayerSettings.GUI.MainFrame then
+            _G.PlayerSettings.GUI.MainFrame.Visible = not _G.PlayerSettings.GUI.MainFrame.Visible
+        end
+    end
+end)
+
+print("🎮 Player Settings fully loaded! Press INSERT to toggle GUI")
