@@ -1,5 +1,5 @@
 -- Loader.lua
-local base = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/loader2
+local base,,="https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/loader2
 local links = {
     Utils = base.."/Utils.lua",
     Speed = base.."/Speed.lua",
