@@ -75,7 +75,7 @@ teleportGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- Frame utama GUI yang akan berisi semua kontrol
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 280, 0, 280) -- Ukuran GUI diubah menjadi 280x280
+MainFrame.Size = UDim2.new(0, 280, 0, 300) -- Ukuran GUI diubah menjadi 280x280
 MainFrame.Position = UDim2.new(0, 100, 0, 100) -- Posisi awal GUI di layar
 MainFrame.BackgroundColor3 = Color3.fromRGB(45,45,45) -- Warna latar belakang abu-abu gelap
 MainFrame.BorderSizePixel = 0 -- Tanpa border
@@ -350,7 +350,7 @@ tpAllButton.Parent = controlsScroll
 local autoRespawnControls = Instance.new("Frame")
 autoRespawnControls.Size = UDim2.new(1, 0, 0, 25)
 autoRespawnControls.BackgroundTransparency = 1
-autoRespawnControls.LayoutOrder = 5
+autoRespawnControls.LayoutOrder = 4
 autoRespawnControls.Parent = controlsScroll
 
 local autoRespawnLabel = Instance.new("TextLabel")
@@ -391,7 +391,7 @@ end)
 local rejoinControls = Instance.new("Frame")
 rejoinControls.Size = UDim2.new(1, 0, 0, 25)
 rejoinControls.BackgroundTransparency = 1
-rejoinControls.LayoutOrder = 4
+rejoinControls.LayoutOrder = 5
 rejoinControls.Parent = controlsScroll
 
 local rejoinBtn = Instance.new("TextButton")
@@ -981,7 +981,7 @@ local function toggleMinimize()
         sjLabel.Visible = false -- Menyembunyikan sjLabel
         corner.CornerRadius = UDim.new(0,8) -- Mengembalikan sudut ke bentuk semula
         -- Animasi ukuran MainFrame kembali ke ukuran normal
-        MainFrame:TweenSize(UDim2.new(0,280,0,280),"Out","Quad",0.3,true)
+        MainFrame:TweenSize(UDim2.new(0,280,0,300),"Out","Quad",0.3,true)
         MinimizeButton.Text = "-" -- Mengubah teks tombol minimize menjadi "-"
     end
 end
