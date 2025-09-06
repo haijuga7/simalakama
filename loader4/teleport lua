@@ -1,0 +1,101 @@
+-- teleport.lua
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local Teleport = {}
+
+function Teleport.Initialize(SharedState)
+    local contentFrame = SharedState.UI.ContentFrame
+    local playerGuiUI = SharedState.UI.PlayerGuiUI
+    local MainFrame = SharedState.UI.MainFrame
+    
+    -- Create teleport button
+    local teleportButton = Instance.new("TextButton")
+    teleportButton.Size = UDim2.new(1, 0, 0, 30)
+    teleportButton.Position = UDim2.new(0, 0, 0, 205)
+    teleportButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    teleportButton.Text = "Open Teleport Menu"
+    teleportButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    teleportButton.Font = Enum.Font.GothamBold
+    teleportButton.TextSize = 14
+    teleportButton.Parent = contentFrame
+    
+    local teleportButtonCorner = Instance.new("UICorner")
+    teleportButtonCorner.CornerRadius = UDim.new(0, 8)
+    teleportButtonCorner.Parent = teleportButton
+    
+    -- Create teleport menu frame
+    local teleportFrame = Instance.new("Frame")
+    teleportFrame.Size = UDim2.new(0, 200, 0, 150)
+    teleportFrame.Position = MainFrame.Position + UDim2.new(0, 300, 0, 0)
+    teleportFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    teleportFrame.Visible = false
+    teleportFrame.Parent = playerGuiUI
+    
+    local teleportCorner = Instance.new("UICorner")
+    teleportCorner.CornerRadius = UDim.new(0, 8)
+    teleportCorner.Parent = teleportFrame
+    
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Size = UDim2.new(1, -10, 1, -10)
+    scroll.Position = UDim2.new(0, 5, 0, 5)
+    scroll.BackgroundTransparency = 1
+    scroll.ScrollBarThickness = 5
+    scroll.Parent = teleportFrame
+    
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 5)
+    layout.Parent = scroll
+    
+    -- Store UI elements in SharedState
+    SharedState.Teleport = {
+        Button = teleportButton,
+        Frame = teleportFrame,
+        ScrollFrame = scroll,
+        Locations = {}
+    }
+    
+    -- Add default teleport locations
+    Teleport.AddLocation(SharedState, "Spawn", Vector3.new(0, 5, 0))
+    Teleport.AddLocation(SharedState, "High Place", Vector3.new(0, 100, 0))
+    Teleport.AddLocation(SharedState, "Mountain", Vector3.new(100, 50, 100))
+    
+    -- Toggle teleport menu visibility
+    teleportButton.MouseButton1Click:Connect(function()
+        teleportFrame.Visible = not teleportFrame.Visible
+    end)
+end
+
+function Teleport.AddLocation(SharedState, name, position)
+    local scroll = SharedState.Teleport.ScrollFrame
+    local teleportFrame = SharedState.Teleport.Frame
+    
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.Parent = scroll
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = btn
+    
+    btn.MouseButton1Click:Connect(function()
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(position)
+            teleportFrame.Visible = false
+        end
+    end)
+    
+    table.insert(SharedState.Teleport.Locations, {
+        Name = name,
+        Position = position,
+        Button = btn
+    })
+end
+
+return Teleport
