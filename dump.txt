@@ -265,12 +265,12 @@ timeBox.Parent = delayControls
 local plusBtn = Instance.new("TextButton")
 plusBtn.Text = "+"
 plusBtn.Size = UDim2.new(0.15, 0, 1, 0)
-plusBtn.Position = UDim2.new(0.69, 0, 0, 0)
+plusBtn.Position = UDim2.new(0.65, 0, 0, 0)
 plusBtn.BackgroundColor3 = Color3.fromRGB(0,200,83)
 plusBtn.TextColor3 = Color3.fromRGB(255,255,255)
 plusBtn.Font = Enum.Font.GothamBold
 plusBtn.TextSize = 16
-Instance.new("UICorner", plusBtn).CornerRadius = UDim.new(0,4)
+Instance.new("UICorner", plusBtn).CornerRadius = UDim.new(0,10)
 plusBtn.Parent = delayControls
 
 -- === Repeat Count + Save ===
@@ -298,7 +298,7 @@ repeatMinusBtn.BackgroundColor3 = Color3.fromRGB(200,50,50)
 repeatMinusBtn.TextColor3 = Color3.fromRGB(255,255,255)
 repeatMinusBtn.Font = Enum.Font.GothamBold
 repeatMinusBtn.TextSize = 16
-Instance.new("UICorner", repeatMinusBtn).CornerRadius = UDim.new(0,8)
+Instance.new("UICorner", repeatMinusBtn).CornerRadius = UDim.new(0,10)
 repeatMinusBtn.Parent = repeatControls
 
 local repeatBox = Instance.new("TextBox")
@@ -315,12 +315,12 @@ repeatBox.Parent = repeatControls
 local repeatPlusBtn = Instance.new("TextButton")
 repeatPlusBtn.Text = "+"
 repeatPlusBtn.Size = UDim2.new(0.15, 0, 1, 0)
-repeatPlusBtn.Position = UDim2.new(0.69, 0, 0, 0)
+repeatPlusBtn.Position = UDim2.new(0.65, 0, 0, 0)
 repeatPlusBtn.BackgroundColor3 = Color3.fromRGB(0,200,83)
 repeatPlusBtn.TextColor3 = Color3.fromRGB(255,255,255)
 repeatPlusBtn.Font = Enum.Font.GothamBold
 repeatPlusBtn.TextSize = 16
-Instance.new("UICorner", repeatPlusBtn).CornerRadius = UDim.new(0,4)
+Instance.new("UICorner", repeatPlusBtn).CornerRadius = UDim.new(0,10)
 repeatPlusBtn.Parent = repeatControls
 
 local saveBtn = Instance.new("TextButton")
