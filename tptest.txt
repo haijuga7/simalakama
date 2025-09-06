@@ -1,0 +1,1097 @@
+--[[
+    Nama Script: Teleport Manager GUI - FIXED VERSION
+    Fungsi Utama:
+    Script ini menyediakan antarmuka pengguna (GUI) di dalam game Roblox
+    yang memungkinkan pemain untuk menyimpan lokasi (teleport point) dan
+    melakukan teleportasi ke lokasi tersebut.
+
+    Fitur-fitur Utama:
+    - Menyimpan dan memuat data teleportasi secara otomatis per game (PlaceId).
+    - Menambahkan lokasi teleportasi saat ini dengan penomoran otomatis yang rapi.
+    - Melakukan teleportasi ke lokasi yang disimpan dengan sekali klik.
+    - Menghapus lokasi teleportasi yang tidak diinginkan.
+    - Fitur "Teleport All" untuk berpindah antar semua lokasi yang disimpan secara berurutan,
+      dengan pengaturan delay (jeda waktu) dan repeat (pengulangan).
+    - Fitur "Auto Respawn" yang dapat diaktifkan/dinonaktifkan, berguna saat "Teleport All"
+      untuk memicu respawn karakter setelah satu putaran teleport selesai.
+    - Tombol "Rejoin" untuk bergabung kembali ke server game saat ini.
+    - GUI yang dapat diminimalkan dan digeser (drag) di layar.
+    - Pengaturan delay dan repeat untuk "Teleport All" dapat disimpan dan dimuat otomatis.
+    - **Tambahan: Popup konfirmasi untuk tambah/hapus teleport.**
+    - **Tambahan: Notifikasi saat teleport berhasil.**
+    - **Tambahan: Penyimpanan data JSON terurut.**
+
+    Cara Penggunaan:
+    1. Jalankan script ini di game Roblox.
+    2. GUI "Teleport Manager" akan muncul di layar Anda.
+    3. Klik "Add Teleport" untuk menyimpan lokasi Anda saat ini.
+    4. Lokasi yang disimpan akan muncul dalam daftar. Klik nama lokasi untuk teleport.
+    5. Gunakan tombol "X" di samping lokasi untuk menghapusnya.
+    6. Atur "Delay (seconds)" dan "Repeat Count" untuk fitur "Teleport All".
+    7. Klik "Teleport All" untuk berpindah antar semua lokasi yang disimpan.
+    8. Aktifkan "Auto Respawn" jika Anda ingin karakter respawn setelah setiap putaran "Teleport All".
+    9. Klik "Rejoin" untuk bergabung kembali ke server.
+    10. Klik tombol "-" untuk meminimalkan GUI, dan "X" untuk menutupnya.
+]]
+
+--[[
+    Bagian 1: Inisialisasi Layanan Roblox dan Variabel Penting
+    ---------------------------------------------------------
+    Mendapatkan akses ke layanan-layanan penting Roblox dan
+    menentukan variabel-variabel awal yang akan digunakan di seluruh script.
+]]
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer -- Pemain lokal yang menjalankan script
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui") -- Folder GUI pemain
+local HttpService = game:GetService("HttpService") -- Untuk encoding/decoding JSON
+local MarketplaceService = game:GetService("MarketplaceService") -- Untuk mendapatkan info game
+local StarterGui = game:GetService("StarterGui") -- Untuk notifikasi
+
+local placeId = tostring(game.PlaceId) -- ID unik game saat ini
+local placeInfo = MarketplaceService:GetProductInfo(game.PlaceId) -- Informasi tentang game (nama, dll.)
+local saveFileName = "teleportData.json" -- Nama file untuk menyimpan data teleport
+local settingsFileName = "tp_settings.json" -- Nama file untuk menyimpan pengaturan (delay, repeat, auto respawn)
+
+-- Data Teleportasi: Tabel untuk menyimpan nama dan posisi teleport point
+local teleportData = {}
+local teleportCount = 0 -- Digunakan untuk penomoran teleport point
+-- Tambahan state
+local isAutoRespawnEnabled = false
+local isAutoRejoinEnabled = false
+
+--[[
+    Bagian 2: Pembuatan Antarmuka Pengguna (GUI)
+    -------------------------------------------
+    Mendefinisikan dan membuat semua elemen visual GUI,
+    seperti frame, tombol, label, dan kotak teks.
+]]
+
+-- ScreenGui utama yang akan menampung semua elemen GUI
+local teleportGui = Instance.new("ScreenGui")
+teleportGui.Name = "TeleportManager"
+teleportGui.Parent = PlayerGui
+teleportGui.ResetOnSpawn = false -- GUI tidak akan hilang saat pemain respawn
+teleportGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Frame utama GUI yang akan berisi semua kontrol
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 280, 0, 280) -- Ukuran GUI diubah menjadi 280x280
+MainFrame.Position = UDim2.new(0, 100, 0, 100) -- Posisi awal GUI di layar
+MainFrame.BackgroundColor3 = Color3.fromRGB(45,45,45) -- Warna latar belakang abu-abu gelap
+MainFrame.BorderSizePixel = 0 -- Tanpa border
+MainFrame.Parent = teleportGui
+
+-- Sudut membulat untuk MainFrame
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0,8)
+corner.Parent = MainFrame
+
+-- Header GUI (bagian atas dengan judul dan tombol kontrol)
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1,0,0,25) -- Lebar penuh MainFrame, tinggi 30
+header.BackgroundColor3 = Color3.fromRGB(30,30,30) -- Warna abu-abu lebih gelap
+header.Parent = MainFrame
+
+-- Sudut membulat untuk Header
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0,8)
+headerCorner.Parent = header
+
+-- Judul GUI
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(0.7,0,1,0) -- 70% lebar header, tinggi penuh header
+title.Position = UDim2.new(0,10,0,0) -- Posisi 10 pixel dari kiri
+title.BackgroundTransparency = 1 -- Transparan
+title.Text = "Teleport Manager"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 12
+title.TextColor3 = Color3.fromRGB(255,255,255) -- Teks putih
+title.TextXAlignment = Enum.TextXAlignment.Left -- Teks rata kiri
+title.Parent = header
+
+-- Tombol Minimize GUI
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Size = UDim2.new(0,25,0,25) -- Ukuran 25x25
+MinimizeButton.Position = UDim2.new(1,-60,0,0) -- 60 pixel dari kanan, 0 pixel dari atas
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(255,255,0) -- Warna kuning
+MinimizeButton.Text = "-"
+MinimizeButton.TextColor3 = Color3.fromRGB(0,0,0) -- Teks hitam
+MinimizeButton.Font = Enum.Font.Gotham
+MinimizeButton.TextSize = 15
+MinimizeButton.Parent = header
+
+-- Sudut membulat untuk Tombol Minimize
+local MinimizeCorner = Instance.new("UICorner")
+MinimizeCorner.CornerRadius = UDim.new(0,12.5) -- Setengah dari ukuran untuk lingkaran
+MinimizeCorner.Parent = MinimizeButton
+
+-- Tombol Close GUI
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0,25,0,25)
+CloseButton.Position = UDim2.new(1,-30,0,0) -- 30 pixel dari kanan, 0 pixel dari atas
+CloseButton.BackgroundColor3 = Color3.fromRGB(200,60,60) -- Warna merah
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255,255,255) -- Teks putih
+CloseButton.Font = Enum.Font.Gotham
+CloseButton.TextSize = 12
+CloseButton.Parent = header
+
+-- Sudut membulat untuk Tombol Close
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0,12.5)
+CloseCorner.Parent = CloseButton
+
+-- Label kecil "TP" yang muncul saat GUI diminimalkan
+local sjLabel = Instance.new("TextButton")
+sjLabel.Size = UDim2.new(0,50,0,50) -- Ukuran 50x50
+sjLabel.Position = UDim2.new(0,0,0,0) -- Posisi di pojok kiri atas MainFrame
+sjLabel.BackgroundColor3 = Color3.fromRGB(45,45,45) -- Warna latar belakang sama dengan MainFrame
+sjLabel.Text = "TP"
+sjLabel.TextScaled = true -- Teks akan menyesuaikan ukuran tombol
+sjLabel.TextColor3 = Color3.fromRGB(255,255,255)
+sjLabel.Visible = false -- Awalnya tidak terlihat
+sjLabel.Parent = MainFrame
+
+-- Sudut membulat untuk sjLabel (membuatnya lingkaran)
+local sjCorner = Instance.new("UICorner")
+sjCorner.CornerRadius = UDim.new(1,0) -- Radius 100% untuk lingkaran
+sjCorner.Parent = sjLabel
+
+-- Frame untuk menampung konten utama GUI (daftar teleport, kontrol)
+local contentFrame = Instance.new("Frame")
+contentFrame.Size = UDim2.new(1,-10,1,-35) -- Lebar penuh MainFrame dikurangi 10, tinggi penuh dikurangi 35
+contentFrame.Position = UDim2.new(0,5,0,30) -- Posisi 5 pixel dari kiri, 30 pixel dari atas (di bawah header)
+contentFrame.BackgroundTransparency = 1 -- Transparan
+contentFrame.Parent = MainFrame
+
+-- ScrollingFrame untuk daftar teleport point
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1,0,0,80) -- Lebar penuh contentFrame, tinggi dikurangi menjadi 80
+scroll.Position = UDim2.new(0,0,0,0) -- Posisi di pojok kiri atas contentFrame
+scroll.CanvasSize = UDim2.new(0,0,0,0) -- Ukuran kanvas akan diatur secara dinamis
+scroll.ScrollBarThickness = 2 -- Ketebalan scrollbar
+scroll.BackgroundTransparency = 0.1 -- Sedikit transparan
+scroll.BackgroundColor3 = Color3.fromRGB(35,35,35) -- Warna abu-abu gelap
+scroll.Parent = contentFrame
+
+-- Sudut membulat untuk ScrollingFrame
+local scrollCorner = Instance.new("UICorner")
+scrollCorner.CornerRadius = UDim.new(0,4)
+scrollCorner.Parent = scroll
+
+-- UIListLayout untuk mengatur tata letak item di dalam ScrollingFrame
+local listLayout = Instance.new("UIListLayout")
+listLayout.FillDirection = Enum.FillDirection.Vertical -- Item disusun secara vertikal
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder -- Diurutkan berdasarkan LayoutOrder
+listLayout.Padding = UDim.new(0,3) -- Jarak antar item 3 pixel
+listLayout.Parent = scroll
+
+-- Mengatur ukuran kanvas ScrollingFrame secara dinamis agar scrolling berfungsi
+listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scroll.CanvasSize = UDim2.new(0,0,0,listLayout.AbsoluteContentSize.Y + 10) -- Menyesuaikan tinggi kanvas
+end)
+
+-- Tombol "Add Teleport"
+local addTPButton = Instance.new("TextButton")
+addTPButton.Size = UDim2.new(1,0,0,25) -- Lebar penuh contentFrame, tinggi dikurangi menjadi 25
+addTPButton.Position = UDim2.new(0,0,0,85) -- Di bawah ScrollingFrame (80 + 5)
+addTPButton.BackgroundColor3 = Color3.fromRGB(0,170,255) -- Warna biru cerah
+addTPButton.Text = "Add Teleport"
+addTPButton.TextColor3 = Color3.fromRGB(255,255,255)
+addTPButton.Font = Enum.Font.GothamBold
+addTPButton.TextSize = 12
+addTPButton.Parent = contentFrame
+
+-- Sudut membulat untuk Tombol Add Teleport
+local addTPCorner = Instance.new("UICorner")
+addTPCorner.CornerRadius = UDim.new(0,8)
+addTPCorner.Parent = addTPButton
+
+-- Label untuk "Delay (seconds)"
+local delayLabel = Instance.new("TextLabel")
+delayLabel.Size = UDim2.new(0.5,0,0,15) -- Setengah lebar contentFrame, tinggi dikurangi menjadi 15
+delayLabel.Position = UDim2.new(0,0,0,115) -- Di bawah tombol Add Teleport (85 + 25 + 5)
+delayLabel.Text = "Delay (seconds):"
+delayLabel.TextColor3 = Color3.fromRGB(255,255,255)
+delayLabel.BackgroundTransparency = 1
+delayLabel.Font = Enum.Font.Gotham
+delayLabel.TextSize = 12
+delayLabel.TextXAlignment = Enum.TextXAlignment.Left
+delayLabel.Parent = contentFrame
+
+-- Tombol minus untuk mengurangi delay
+local minusBtn = Instance.new("TextButton")
+minusBtn.Size = UDim2.new(0.2,0,0,20) -- 20% lebar contentFrame, tinggi dikurangi menjadi 20
+minusBtn.Position = UDim2.new(0,0,0,135) -- Di bawah delayLabel (115 + 15 + 5)
+minusBtn.Text = "-"
+minusBtn.BackgroundColor3 = Color3.fromRGB(200,50,50) -- Warna merah
+minusBtn.TextColor3 = Color3.fromRGB(255,255,255)
+minusBtn.Font = Enum.Font.GothamBold
+minusBtn.TextSize = 16
+minusBtn.Parent = contentFrame
+
+-- Kotak teks untuk menampilkan dan mengubah nilai delay
+local timeBox = Instance.new("TextBox")
+timeBox.Size = UDim2.new(0.4,0,0,20) -- 40% lebar contentFrame, tinggi dikurangi menjadi 20
+timeBox.Position = UDim2.new(0.2,0,0,135) -- Di samping tombol minus
+timeBox.Text = "1.0" -- Nilai default
+timeBox.TextScaled = true
+timeBox.BackgroundColor3 = Color3.fromRGB(70,70,70) -- Warna abu-abu
+timeBox.TextColor3 = Color3.fromRGB(255,255,255)
+timeBox.Font = Enum.Font.Gotham
+timeBox.TextSize = 12
+timeBox.Parent = contentFrame
+
+-- Sudut membulat untuk timeBox
+local timeCorner = Instance.new("UICorner")
+timeCorner.CornerRadius = UDim.new(0,4)
+timeCorner.Parent = timeBox
+
+-- Sudut membulat untuk minusBtn
+local minusCorner = Instance.new("UICorner")
+minusCorner.CornerRadius = UDim.new(0,4)
+minusCorner.Parent = minusBtn
+
+-- Tombol plus untuk menambah delay
+local plusBtn = Instance.new("TextButton")
+plusBtn.Size = UDim2.new(0.2,0,0,20) -- 20% lebar contentFrame, tinggi dikurangi menjadi 20
+plusBtn.Position = UDim2.new(0.6,0,0,135) -- Di samping timeBox
+plusBtn.Text = "+"
+plusBtn.BackgroundColor3 = Color3.fromRGB(0,200,83) -- Warna hijau
+plusBtn.TextColor3 = Color3.fromRGB(255,255,255)
+plusBtn.Font = Enum.Font.GothamBold
+plusBtn.TextSize = 16
+plusBtn.Parent = contentFrame
+
+-- Sudut membulat untuk plusBtn
+local plusCorner = Instance.new("UICorner")
+plusCorner.CornerRadius = UDim.new(0,4)
+plusCorner.Parent = plusBtn
+
+-- Label untuk "Repeat Count"
+local repeatLabel = Instance.new("TextLabel")
+repeatLabel.Size = UDim2.new(0.5,0,0,15) -- Setengah lebar contentFrame, tinggi dikurangi menjadi 15
+repeatLabel.Position = UDim2.new(0,0,0,160) -- Di bawah kontrol delay (135 + 20 + 5)
+repeatLabel.Text = "Repeat Count:"
+repeatLabel.TextColor3 = Color3.fromRGB(255,255,255)
+repeatLabel.BackgroundTransparency = 1
+repeatLabel.Font = Enum.Font.Gotham
+repeatLabel.TextSize = 12
+repeatLabel.TextXAlignment = Enum.TextXAlignment.Left
+repeatLabel.Parent = contentFrame
+
+-- Kotak teks untuk menampilkan dan mengubah nilai repeat count
+local repeatBox = Instance.new("TextBox")
+repeatBox.Size = UDim2.new(0.4,0,0,20) -- 40% lebar contentFrame, tinggi dikurangi menjadi 20
+repeatBox.Position = UDim2.new(0.2,0,0,180) -- Di bawah repeatLabel (160 + 15 + 5)
+repeatBox.Text = "1" -- Nilai default
+repeatBox.TextScaled = true
+repeatBox.BackgroundColor3 = Color3.fromRGB(70,70,70)
+repeatBox.TextColor3 = Color3.fromRGB(255,255,255)
+repeatBox.Font = Enum.Font.Gotham
+repeatBox.TextSize = 12
+repeatBox.Parent = contentFrame
+
+-- Sudut membulat untuk repeatBox
+local repeatCorner = Instance.new("UICorner")
+repeatCorner.CornerRadius = UDim.new(0,4)
+repeatCorner.Parent = repeatBox
+
+-- Tombol minus untuk mengurangi repeat count
+local repeatMinusBtn = Instance.new("TextButton")
+repeatMinusBtn.Size = UDim2.new(0.2,0,0,20) -- 20% lebar contentFrame, tinggi dikurangi menjadi 20
+repeatMinusBtn.Position = UDim2.new(0,0,0,180) -- Di samping repeatBox
+repeatMinusBtn.Text = "-"
+repeatMinusBtn.BackgroundColor3 = Color3.fromRGB(200,50,50)
+repeatMinusBtn.TextColor3 = Color3.fromRGB(255,255,255)
+repeatMinusBtn.Font = Enum.Font.GothamBold
+repeatMinusBtn.TextSize = 16
+repeatMinusBtn.Parent = contentFrame
+
+-- Sudut membulat untuk repeatMinusBtn
+local repeatMinusCorner = Instance.new("UICorner")
+repeatMinusCorner.CornerRadius = UDim.new(0,4)
+repeatMinusCorner.Parent = repeatMinusBtn
+
+-- Tombol plus untuk menambah repeat count
+local repeatPlusBtn = Instance.new("TextButton")
+repeatPlusBtn.Size = UDim2.new(0.2,0,0,20) -- 20% lebar contentFrame, tinggi dikurangi menjadi 20
+repeatPlusBtn.Position = UDim2.new(0.6,0,0,180) -- Di samping repeatBox
+repeatPlusBtn.Text = "+"
+repeatPlusBtn.BackgroundColor3 = Color3.fromRGB(0,200,83)
+repeatPlusBtn.TextColor3 = Color3.fromRGB(255,255,255)
+repeatPlusBtn.Font = Enum.Font.GothamBold
+repeatPlusBtn.TextSize = 16
+repeatPlusBtn.Parent = contentFrame
+
+-- Sudut membulat untuk repeatPlusBtn
+local repeatPlusCorner = Instance.new("UICorner")
+repeatPlusCorner.CornerRadius = UDim.new(0,4)
+repeatPlusCorner.Parent = repeatPlusBtn
+
+-- Tombol "Save Settings" (untuk menyimpan delay dan repeat count)
+local saveBtn = Instance.new("TextButton")
+saveBtn.Size = UDim2.new(0.2,0,0,40) -- Ukuran disesuaikan menjadi 40
+saveBtn.Position = UDim2.new(0.8,0,0,135) -- Di sisi kanan kontrol delay
+saveBtn.BackgroundColor3 = Color3.fromRGB(0,122,255) -- Warna biru
+saveBtn.Text = "S" -- Singkatan dari Save
+saveBtn.TextColor3 = Color3.fromRGB(255,255,255)
+saveBtn.Font = Enum.Font.GothamBold
+saveBtn.TextSize = 14
+saveBtn.Parent = contentFrame
+
+-- Sudut membulat untuk saveBtn
+local saveCorner = Instance.new("UICorner")
+saveCorner.CornerRadius = UDim.new(0,6)
+saveCorner.Parent = saveBtn
+
+-- Tombol "Teleport All"
+local tpAllButton = Instance.new("TextButton")
+tpAllButton.Size = UDim2.new(1,0,0,25) -- Lebar penuh contentFrame, tinggi dikurangi menjadi 25
+tpAllButton.Position = UDim2.new(0,0,0,205) -- Di bawah kontrol delay/repeat (180 + 20 + 5)
+tpAllButton.BackgroundColor3 = Color3.fromRGB(0,120,215) -- Warna biru
+tpAllButton.Text = "Teleport All"
+tpAllButton.TextColor3 = Color3.fromRGB(255,255,255)
+tpAllButton.Font = Enum.Font.GothamBold
+tpAllButton.TextSize = 12
+tpAllButton.Parent = contentFrame
+
+-- Sudut membulat untuk tpAllButton
+local tpAllCorner = Instance.new("UICorner")
+tpAllCorner.CornerRadius = UDim.new(0,8)
+tpAllCorner.Parent = tpAllButton
+
+-- Tombol "Rejoin"
+local rejoinBtn = Instance.new("TextButton")
+rejoinBtn.Size = UDim2.new(1,0,0,25) -- Lebar penuh contentFrame, tinggi dikurangi menjadi 25
+rejoinBtn.Position = UDim2.new(0,0,0,235) -- Di bawah tombol Teleport All (205 + 25 + 5)
+rejoinBtn.BackgroundColor3 = Color3.fromRGB(255,140,0) -- Warna oranye
+rejoinBtn.Text = "Rejoin"
+rejoinBtn.TextColor3 = Color3.fromRGB(255,255,255)
+rejoinBtn.Font = Enum.Font.GothamBold
+rejoinBtn.TextSize = 14
+rejoinBtn.Parent = contentFrame
+
+-- Sudut membulat untuk rejoinBtn
+local rejoinCorner = Instance.new("UICorner")
+rejoinCorner.CornerRadius = UDim.new(0,8)
+rejoinCorner.Parent = rejoinBtn
+
+-- ===== AUTO REJOIN SWITCH di samping tombol Rejoin =====
+local autoRejoinSwitch = Instance.new("TextButton")
+autoRejoinSwitch.Size = UDim2.new(0,50,0,20) -- Ukuran disesuaikan
+autoRejoinSwitch.Position = UDim2.new(1,-55,0,2.5) -- Posisi disesuaikan
+autoRejoinSwitch.BackgroundColor3 = Color3.fromRGB(150,50,50)
+autoRejoinSwitch.Text = "OFF"
+autoRejoinSwitch.TextColor3 = Color3.fromRGB(255,255,255)
+autoRejoinSwitch.Font = Enum.Font.GothamBold
+autoRejoinSwitch.TextSize = 10
+autoRejoinSwitch.Parent = rejoinBtn
+Instance.new("UICorner", autoRejoinSwitch).CornerRadius = UDim.new(0,10)
+
+autoRejoinSwitch.MouseButton1Click:Connect(function()
+    isAutoRejoinEnabled = not isAutoRejoinEnabled
+    if isAutoRejoinEnabled then
+        autoRejoinSwitch.Text = "ON"
+        autoRejoinSwitch.BackgroundColor3 = Color3.fromRGB(50,150,50)
+        showNotification("Auto reJoin", "Berhasil Diaktifkan", 1)
+    else
+        autoRejoinSwitch.Text = "OFF"
+        autoRejoinSwitch.BackgroundColor3 = Color3.fromRGB(150,50,50)
+        showNotification("Auto reJoin", "Berhasil Dinonaktifkan", 1)
+    end
+end)
+
+-- ===== UI AUTO RESPAWN (label + switch) =====
+local autoRespawnFrame = Instance.new("Frame")
+autoRespawnFrame.Size = UDim2.new(1,0,0,20) -- Tinggi dikurangi menjadi 20
+autoRespawnFrame.Position = UDim2.new(0,0,0,260) -- Posisi disesuaikan (235 + 25)
+autoRespawnFrame.BackgroundTransparency = 1
+autoRespawnFrame.Parent = contentFrame
+
+local autoRespawnLabel = Instance.new("TextLabel")
+autoRespawnLabel.Size = UDim2.new(0.7,0,1,0)
+autoRespawnLabel.Position = UDim2.new(0,0,0,0)
+autoRespawnLabel.BackgroundTransparency = 1
+autoRespawnLabel.Text = "Auto Respawn:"
+autoRespawnLabel.TextColor3 = Color3.fromRGB(255,255,255)
+autoRespawnLabel.Font = Enum.Font.GothamBold
+autoRespawnLabel.TextSize = 12
+autoRespawnLabel.TextXAlignment = Enum.TextXAlignment.Left
+autoRespawnLabel.Parent = autoRespawnFrame
+
+local autoRespawnSwitch = Instance.new("TextButton")
+autoRespawnSwitch.Size = UDim2.new(0,50,0,20) -- Ukuran disesuaikan
+autoRespawnSwitch.Position = UDim2.new(1,-55,0,0) -- Posisi disesuaikan
+autoRespawnSwitch.BackgroundColor3 = Color3.fromRGB(150,50,50)
+autoRespawnSwitch.Text = "OFF"
+autoRespawnSwitch.TextColor3 = Color3.fromRGB(255,255,255)
+autoRespawnSwitch.Font = Enum.Font.GothamBold
+autoRespawnSwitch.TextSize = 10
+autoRespawnSwitch.Parent = autoRespawnFrame
+Instance.new("UICorner", autoRespawnSwitch).CornerRadius = UDim.new(0,10)
+
+autoRespawnSwitch.MouseButton1Click:Connect(function()
+    isAutoRespawnEnabled = not isAutoRespawnEnabled
+    if isAutoRespawnEnabled then
+        autoRespawnSwitch.Text = "ON"
+        autoRespawnSwitch.BackgroundColor3 = Color3.fromRGB(50,150,50)
+        showNotification("Auto reSpawn", "Berhasil diaktifkan", 1)
+    else
+        autoRespawnSwitch.Text = "OFF"
+        autoRespawnSwitch.BackgroundColor3 = Color3.fromRGB(150,50,50)
+        showNotification("Auto reSpawn", "Berhasil Dinonaktifkan", 1)
+    end
+end)
+
+-- Fungsi Notifikasi
+local function showNotification(title, text, duration)
+    StarterGui:SetCore("SendNotification", {
+        Title = title or "Notification",
+        Text = text or "",
+        Duration = duration or 3,
+    })
+end
+
+-- Fungsi membuat popup konfirmasi
+local function createConfirmationPopup(message, onConfirm)
+    -- Membuat frame popup
+    local popup = Instance.new("Frame")
+    popup.Size = UDim2.new(0, 250, 0, 120)
+    popup.AnchorPoint = Vector2.new(0.5, 0.5)
+    popup.Position = UDim2.new(0.5, 0, 0.5, 0)
+    popup.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    popup.BorderSizePixel = 0
+    popup.Parent = teleportGui
+    popup.ZIndex = 10
+
+    local corner = Instance.new("UICorner", popup)
+    corner.CornerRadius = UDim.new(0, 8)
+
+    -- Label pesan
+    local label = Instance.new("TextLabel", popup)
+    label.Size = UDim2.new(1, -20, 0, 60)
+    label.Position = UDim2.new(0, 10, 0, 10)
+    label.BackgroundTransparency = 1
+    label.Text = message
+    label.TextColor3 = Color3.new(1,1,1)
+    label.TextWrapped = true
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 14
+
+    -- Tombol Ya
+    local yesBtn = Instance.new("TextButton", popup)
+    yesBtn.Size = UDim2.new(0.4, 0, 0, 30)
+    yesBtn.Position = UDim2.new(0.1, 0, 1, -40)
+    yesBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+    yesBtn.Text = "Yes"
+    yesBtn.TextColor3 = Color3.new(1,1,1)
+    yesBtn.Font = Enum.Font.GothamBold
+    yesBtn.TextSize = 14
+    local yesCorner = Instance.new("UICorner", yesBtn)
+    yesCorner.CornerRadius = UDim.new(0, 6)
+
+    -- Tombol Tidak
+    local noBtn = Instance.new("TextButton", popup)
+    noBtn.Size = UDim2.new(0.4, 0, 0, 30)
+    noBtn.Position = UDim2.new(0.5, 0, 1, -40)
+    noBtn.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+    noBtn.Text = "No"
+    noBtn.TextColor3 = Color3.new(1,1,1)
+    noBtn.Font = Enum.Font.GothamBold
+    noBtn.TextSize = 14
+    local noCorner = Instance.new("UICorner", noBtn)
+    noCorner.CornerRadius = UDim.new(0, 6)
+
+    -- Fungsi untuk menghapus popup
+    local function closePopup()
+        popup:Destroy()
+    end
+
+    -- Event tombol Ya
+    yesBtn.MouseButton1Click:Connect(function()
+        closePopup()
+        onConfirm()
+    end)
+
+    -- Event tombol Tidak
+    noBtn.MouseButton1Click:Connect(function()
+        closePopup()
+    end)
+end
+
+--[[
+    Bagian 3: Fungsi-fungsi Bantu
+    ----------------------------
+    Kumpulan fungsi-fungsi kecil yang mendukung logika utama script.
+]]
+
+-- Fungsi untuk mendapatkan nomor teleport berikutnya yang tersedia (mengisi celah)
+local function getNextAvailableNumber()
+    local usedNumbers = {}
+    
+    -- Mengumpulkan semua nomor yang sudah digunakan dari nama teleport point
+    for tpName in pairs(teleportData) do
+        local number = string.match(tpName, "TP (%d+)") -- Mencari angka dalam string "TP XX"
+        if number then
+            usedNumbers[tonumber(number)] = true -- Menandai angka sebagai sudah digunakan
+        end
+    end
+    
+    -- Mencari nomor kosong terkecil yang belum digunakan
+    local number = 1
+    while usedNumbers[number] do
+        number = number + 1
+        if number > 100 then break end -- Batas keamanan untuk mencegah loop tak terbatas
+    end
+    
+    return number
+end
+
+-- Fungsi untuk memformat string JSON agar lebih mudah dibaca (indentasi)
+local function prettyJSON(jsonString, useTabs)
+    local indentChar = useTabs and "\t" or "    " -- Menggunakan tab atau 4 spasi untuk indentasi
+    local result, level = {}, 0 -- Tabel untuk hasil, level indentasi
+    local inString, escape = false, false -- Status apakah sedang di dalam string JSON atau karakter escape
+
+    for i = 1, #jsonString do
+        local char = jsonString:sub(i,i) -- Mengambil karakter satu per satu
+        
+        if char == '"' and not escape then
+            inString = not inString -- Mengubah status inString saat bertemu tanda kutip (bukan escape)
+        end
+        
+        if not inString then -- Jika tidak di dalam string (berarti sedang memproses struktur JSON)
+            if char == "{" or char == "[" then
+                level = level + 1 -- Tingkatkan level indentasi
+                table.insert(result, char .. "\n" .. string.rep(indentChar, level)) -- Tambahkan karakter, baris baru, dan indentasi
+            elseif char == "}" or char == "]" then
+                level = level - 1 -- Kurangi level indentasi
+                table.insert(result, "\n" .. string.rep(indentChar, level) .. char) -- Tambahkan baris baru, indentasi, dan karakter
+            elseif char == "," then
+                table.insert(result, char .. "\n" .. string.rep(indentChar, level)) -- Tambahkan koma, baris baru, dan indentasi
+            elseif char == ":" then
+                table.insert(result, ": ") -- Tambahkan titik dua dengan spasi
+            else
+                table.insert(result, char) -- Tambahkan karakter lainnya
+            end
+        else -- Jika di dalam string (biarkan apa adanya)
+            table.insert(result, char)
+            if char == "\\" and not escape then
+                escape = true -- Menandai karakter escape
+            else
+                escape = false
+            end
+        end
+    end
+    
+    return table.concat(result) -- Menggabungkan semua bagian menjadi satu string
+end
+
+-- Fungsi untuk mengurutkan keys dalam tabel (dictionary) secara rekursif
+local function encodeObjectSorted(t)
+    local keys = {}
+    for k in pairs(t) do table.insert(keys, k) end
+    table.sort(keys) -- Mengurutkan keys secara alfabetis
+    local parts = {"{"}
+    for i, k in ipairs(keys) do
+        local v = t[k]
+        local keyStr = string.format("%q", k)
+        local valStr
+        if type(v) == "string" then
+            valStr = string.format("%q", v)
+        elseif type(v) == "table" then
+            -- Rekursif untuk tabel bersarang
+            valStr = encodeObjectSorted(v) 
+        else
+            valStr = tostring(v)
+        end
+        table.insert(parts, keyStr .. ":" .. valStr)
+        if i < #keys then
+            table.insert(parts, ",")
+        end
+    end
+    table.insert(parts, "}")
+    return table.concat(parts)
+end
+
+-- Fungsi untuk encode JSON dengan keys terurut dan diformat rapi
+local function sortedJSONEncodeManual(t)
+    local encoded = encodeObjectSorted(t)
+    return prettyJSON(encoded, true)
+end
+
+--[[
+    Bagian 4: Fungsi Penyimpanan dan Pemuatan Data
+    ---------------------------------------------
+    Fungsi untuk menyimpan dan memuat data teleportasi serta pengaturan
+    ke/dari file lokal.
+]]
+
+-- Fungsi untuk menyimpan data teleportasi
+local function saveTeleportData()
+    -- Menggunakan pcall untuk menangani error saat menyimpan file
+    local success, err = pcall(function()
+        local allData = {} -- Tabel untuk menyimpan data dari semua game
+        
+        -- Memuat data yang sudah ada dari file (jika ada)
+        if isfile(saveFileName) then
+            local content = readfile(saveFileName)
+            -- Gunakan pcall untuk decode juga, jaga-jaga jika file rusak
+            local decodeSuccess, decodedData = pcall(HttpService.JSONDecode, HttpService, content)
+            if decodeSuccess and type(decodedData) == "table" then
+                allData = decodedData
+            else
+                warn("Failed to decode existing teleport data, starting fresh or data corrupted:", decodedData)
+            end
+        end
+        
+        -- Memperbarui data khusus untuk game ini (placeId)
+        allData[placeId] = teleportData
+        
+        local beautified = sortedJSONEncodeManual(allData) -- Menggunakan fungsi encode terurut
+        writefile(saveFileName, beautified)
+    end)
+    if not success then
+        warn("Failed to save teleport data:", err) -- Menampilkan peringatan jika gagal
+    end
+end
+
+-- Fungsi untuk memuat data teleportasi
+local function loadTeleportData()
+    -- Menggunakan pcall untuk menangani error saat memuat file
+    local success, err = pcall(function()
+        if isfile(saveFileName) then
+            local content = readfile(saveFileName)
+            local allDataSuccess, allData = pcall(HttpService.JSONDecode, HttpService, content) -- Decode JSON dari file
+            
+            if allDataSuccess and type(allData) == "table" then
+                -- Mengambil data khusus untuk game ini
+                if allData[placeId] and type(allData[placeId]) == "table" then
+                    teleportData = allData[placeId] -- Memuat data teleport untuk game ini
+                    
+                    -- Mencari teleportCount tertinggi untuk penomoran berikutnya
+                    teleportCount = 0
+                    for tpName in pairs(teleportData) do
+                        local number = string.match(tpName, "TP (%d+)")
+                        if number then
+                            teleportCount = math.max(teleportCount, tonumber(number))
+                        end
+                    end
+                end
+            else
+                warn("Failed to decode teleport data from file or data is not a table:", allData)
+            end
+        end
+    end)
+    if not success then
+        warn("Failed to load teleport data:", err) -- Menampilkan peringatan jika gagal
+        teleportData = {} -- Mengosongkan data jika ada error
+        teleportCount = 0
+    end
+end
+
+-- Fungsi untuk menyimpan pengaturan (delay, repeat, auto respawn)
+local function saveSettings()
+    local allSettings = {} -- Tabel untuk menyimpan pengaturan dari semua game
+    if isfile(settingsFileName) then
+        local content = readfile(settingsFileName)
+        local decodeSuccess, decodedSettings = pcall(HttpService.JSONDecode, HttpService, content)
+        if decodeSuccess and type(decodedSettings) == "table" then
+            allSettings = decodedSettings
+        else
+            warn("Failed to decode existing settings, starting fresh or data corrupted:", decodedSettings)
+        end
+    end
+    -- Menyimpan pengaturan khusus untuk game ini (placeId)
+    allSettings[placeId] = {
+        delay = tonumber(timeBox.Text) or 1,
+        retry = tonumber(repeatBox.Text) or 1,
+        autoRespawn = isAutoRespawnEnabled,
+        autoRejoin = isAutoRejoinEnabled,
+    }
+    local beautified = sortedJSONEncodeManual(allSettings) -- Menggunakan fungsi encode terurut
+    writefile(settingsFileName, beautified) -- Menulis pengaturan ke file
+end
+
+-- Fungsi untuk memuat pengaturan (delay, repeat, auto respawn)
+local function loadSettings()
+    if isfile(settingsFileName) then
+        local content = readfile(settingsFileName)
+        local allSettingsSuccess, allSettings = pcall(HttpService.JSONDecode, HttpService, content) -- Memuat pengaturan dari file
+        
+        if allSettingsSuccess and type(allSettings) == "table" then
+            if allSettings[placeId] and type(allSettings[placeId]) == "table" then
+                local s = allSettings[placeId]
+                timeBox.Text = tostring(s.delay or 1) -- Mengatur nilai delay di timeBox
+                repeatBox.Text = tostring(s.retry or 1) -- Mengatur nilai repeat di repeatBox
+                isAutoRespawnEnabled = s.autoRespawn or false
+                isAutoRejoinEnabled = s.autoRejoin or false
+
+                if isAutoRespawnEnabled then
+                    autoRespawnSwitch.Text = "ON"
+                    autoRespawnSwitch.BackgroundColor3 = Color3.fromRGB(50,150,50)
+                else
+                    autoRespawnSwitch.Text = "OFF"
+                    autoRespawnSwitch.BackgroundColor3 = Color3.fromRGB(150,50,50)
+                end
+
+                if isAutoRejoinEnabled then
+                    autoRejoinSwitch.Text = "ON"
+                    autoRejoinSwitch.BackgroundColor3 = Color3.fromRGB(50,150,50)
+                else
+                    autoRejoinSwitch.Text = "OFF"
+                    autoRejoinSwitch.BackgroundColor3 = Color3.fromRGB(150,50,50)
+                end
+            end
+        else
+            warn("Failed to decode settings from file or data is not a table:", allSettings)
+        end
+    end
+end
+
+--[[
+    Bagian 5: Fungsi Pembaruan Tampilan Daftar Teleport
+    --------------------------------------------------
+    Fungsi ini bertanggung jawab untuk membuat ulang dan menampilkan
+    daftar teleport point di GUI.
+]]
+
+-- Fungsi untuk memperbarui (refresh) daftar teleport point di GUI
+local function refreshTeleportList()
+    -- Menghapus semua tombol teleport yang ada sebelumnya
+    for _, child in ipairs(scroll:GetChildren()) do
+        -- Memastikan hanya frame item teleport yang dihapus, dan bukan UIListLayout
+        if child:IsA("Frame") then 
+            child:Destroy()
+        end
+    end
+    
+    -- Membuat ulang semua tombol teleport berdasarkan data yang ada
+    local sortedNames = {} -- Tabel untuk menyimpan nama teleport yang sudah diurutkan
+    for tpName in pairs(teleportData) do
+        table.insert(sortedNames, tpName)
+    end
+    table.sort(sortedNames) -- Mengurutkan nama teleport secara alfabetis (misal: TP 01, TP 02)
+    
+    for _, tpName in ipairs(sortedNames) do
+        local posStr = teleportData[tpName] -- Mengambil string posisi
+        -- Mengekstrak koordinat X, Y, Z dari string posisi
+        local x,y,z = string.match(posStr,"([^,]+),([^,]+),([^,]+)")
+        if x and y and z then
+            local pos = Vector3.new(tonumber(x),tonumber(y),tonumber(z)) -- Membuat Vector3 dari koordinat
+            
+            -- Membuat frame untuk setiap item teleport (berisi tombol teleport dan tombol hapus)
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1,-10,0,25) -- Lebar penuh scroll dikurangi 10, tinggi dikurangi menjadi 25
+            frame.BackgroundColor3 = Color3.fromRGB(60,60,60) -- Warna abu-abu
+            frame.Parent = scroll
+
+            -- Sudut membulat untuk frame item
+            local frameCorner = Instance.new("UICorner")
+            frameCorner.CornerRadius = UDim.new(0,6)
+            frameCorner.Parent = frame
+
+            -- Tombol untuk melakukan teleport ke lokasi ini
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1,-40,1,0) -- Lebar penuh frame dikurangi 40, tinggi penuh frame
+            btn.Position = UDim2.new(0,5,0,0) -- Posisi 5 pixel dari kiri
+            btn.Text = tpName -- Nama teleport (misal: TP 01)
+            btn.TextColor3 = Color3.fromRGB(255,255,255)
+            btn.BackgroundTransparency = 1
+            btn.Font = Enum.Font.Gotham
+            btn.TextSize = 12
+            btn.TextXAlignment = Enum.TextXAlignment.Left -- Teks rata kiri
+            btn.Parent = frame
+
+            -- Tombol untuk menghapus teleport point ini
+            local del = Instance.new("TextButton")
+            del.Size = UDim2.new(0,25,0,20) -- Ukuran 25x20
+            del.Position = UDim2.new(1,-30,0,2.5) -- 30 pixel dari kanan, 2.5 pixel dari atas
+            del.Text = "X"
+            del.BackgroundColor3 = Color3.fromRGB(200,50,50) -- Warna merah
+            del.TextColor3 = Color3.fromRGB(255,255,255)
+            del.Font = Enum.Font.GothamBold
+            del.TextSize = 11
+            del.Parent = frame
+
+            -- Sudut membulat untuk tombol hapus
+            local delCorner = Instance.new("UICorner")
+            delCorner.CornerRadius = UDim.new(0,4)
+            delCorner.Parent = del
+
+            -- Menghubungkan fungsi teleport saat tombol diklik
+            btn.MouseButton1Click:Connect(function()
+                local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait() -- Mendapatkan karakter pemain
+                local root = char:WaitForChild("HumanoidRootPart") -- Mendapatkan HumanoidRootPart
+                root.CFrame = CFrame.new(pos) -- Mengubah posisi karakter ke posisi teleport
+                showNotification("Teleport", "Berhasil teleport ke "..tpName, 1.5) -- Notifikasi teleport individual
+            end)
+            
+            -- Menghubungkan fungsi hapus saat tombol hapus diklik (dengan konfirmasi)
+            del.MouseButton1Click:Connect(function()
+                createConfirmationPopup("Are you sure you want to delete "..tpName.."?", function()
+                    teleportData[tpName] = nil -- Menghapus data teleport dari tabel
+                    frame:Destroy() -- Menghapus frame item dari GUI
+                    saveTeleportData() -- Menyimpan perubahan data
+                    refreshTeleportList() -- Memperbarui daftar GUI setelah penghapusan
+                    showNotification("Teleport", tpName.." berhasil dihapus.", 1.5)
+                end)
+            end)
+        end
+    end
+end
+
+--[[
+    Bagian 6: Fungsi-fungsi Aksi Utama
+    ---------------------------------
+    Fungsi-fungsi yang dipanggil saat tombol-tombol utama GUI diklik.
+]]
+
+-- Fungsi untuk menambahkan teleport point baru (dengan konfirmasi)
+local function addTeleport()
+    createConfirmationPopup("Add current position as new teleport point?", function()
+        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local root = char:WaitForChild("HumanoidRootPart")
+        local pos = root.Position -- Mengambil posisi karakter saat ini
+    
+        -- Mendapatkan nomor berikutnya yang tersedia untuk nama teleport (misal: TP 01, TP 02)
+        local nextNumber = getNextAvailableNumber()
+        local tpName = "TP " .. string.format("%02d", nextNumber) -- Memformat nama (misal: TP 01)
+    
+        teleportData[tpName] = string.format("%.1f,%.1f,%.1f", pos.X, pos.Y, pos.Z) -- Menyimpan posisi dalam format string
+        teleportCount = math.max(teleportCount, nextNumber) -- Memperbarui counter teleport
+    
+        saveTeleportData() -- Menyimpan data teleport yang baru
+        refreshTeleportList() -- Memperbarui tampilan daftar teleport.
+        showNotification("Teleport", "Posisi saat ini ditambahkan sebagai "..tpName, 1.5)
+    end)
+end
+
+local function autoRespawn()
+    if isAutoRespawnEnabled then
+        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        if char then
+            -- Menghancurkan JointInstance untuk memicu respawn karakter
+            -- Pastikan karakter memiliki Humanoid dan HumanoidRootPart
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.Health = 0 -- Cara paling efektif untuk memicu respawn
+            end
+        end
+        task.wait(3.2) -- Memberi waktu untuk karakter respawn
+    end
+end
+
+-- Fungsi untuk bergabung kembali ke server game saat ini
+local function rejoin()
+    showNotification("Rejoin", "Mencoba bergabung kembali ke server...", 2)
+    -- Menggunakan pcall untuk menangani error saat teleport
+    local success, err = pcall(function()
+        game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer) -- Teleport ke PlaceId yang sama
+    end)
+    if not success then
+        warn("Failed to rejoin:", err) -- Menampilkan peringatan jika gagal
+        showNotification("Rejoin", "Gagal bergabung kembali: " .. err, 3)
+    end
+end
+
+-- Fungsi untuk melakukan teleport ke semua titik yang disimpan secara berurutan
+local function teleportAll()
+    showNotification("Teleport", "Tombol Teleport All di Tekan", 2)
+    local delayTime = math.max(0.1, tonumber(timeBox.Text) or 1)
+    local repeatCount = math.max(1, tonumber(repeatBox.Text) or 1)
+
+    -- ambil & urutkan teleport point
+    local sortedNames = {}
+    for tpName in pairs(teleportData) do
+        table.insert(sortedNames, tpName)
+    end
+    table.sort(sortedNames)
+
+    if #sortedNames == 0 then
+        showNotification("Teleport", "Tidak ada titik teleport yang disimpan.", 2)
+        return
+    end
+
+    -- loop repeat
+    for repeatIndex = 1, repeatCount do
+        for i, tpName in ipairs(sortedNames) do
+            local posStr = teleportData[tpName]
+            local x,y,z = string.match(posStr,"([^,]+),([^,]+),([^,]+)")
+            if x and y and z then
+                if i < #sortedNames then
+                    task.wait(delayTime)
+                else
+                    task.wait(1)
+                end
+                local pos = Vector3.new(tonumber(x),tonumber(y),tonumber(z))
+                local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                local root = char:WaitForChild("HumanoidRootPart")
+                root.CFrame = CFrame.new(pos)
+                showNotification("Auto Teleport", "Sisa Teleport. ("..i.."/"..#sortedNames..")", 2)
+
+                -- Tunggu delayTime kecuali untuk teleport terakhir dalam putaran
+            end
+        end
+
+        -- Cek apakah ini adalah putaran terakhir
+        local isLastRepeat = (repeatIndex == repeatCount)
+        
+        -- Jika ini bukan putaran terakhir, lakukan auto respawn jika diaktifkan
+        task.wait(delayTime)
+        if isAutoRespawnEnabled then
+            showNotification("Auto Respawn", "Memulai respawn. ("..repeatIndex.."/"..repeatCount..")", 2)
+            autoRespawn()
+            task.wait(1.7) -- Tunggu proses respawn selesai sebelum melanjutkan ke putaran berikutnya
+        else
+            showNotification("Teleport", "Sisa retry. ("..repeatIndex.."/"..repeatCount..")", 2)
+        end
+        
+        -- Tunggu jeda antar putaran (kecuali untuk putaran terakhir)
+        if not isLastRepeat then
+            task.wait(0.5)
+        end
+    end
+
+    -- Setelah semua putaran selesai, lakukan auto rejoin jika diaktifkan
+    if isAutoRejoinEnabled then
+        showNotification("Auto Rejoin", "Memulai rejoin dalam 3 detik...", 3)
+        task.wait(3)
+        rejoin()
+    else
+        showNotification("Teleport", "Semua teleport selesai!", 2)
+    end
+end
+
+--[[
+    Bagian 7: Fungsi Kontrol GUI (Minimize/Maximize dan Dragging)
+    ------------------------------------------------------------
+    Fungsi untuk mengontrol tampilan GUI (meminimalkan, memaksimalkan,
+    dan menggeser GUI di layar).
+]]
+
+local minimized = false -- Status GUI (true jika diminimalkan, false jika tidak)
+-- Fungsi untuk meminimalkan atau memaksimalkan GUI
+local function toggleMinimize()
+    minimized = not minimized -- Mengubah status
+    if minimized then
+        -- Animasi ukuran MainFrame menjadi kecil (50x50)
+        MainFrame:TweenSize(UDim2.new(0,50,0,50),"Out","Quad",0.3,true)
+        corner.CornerRadius = UDim.new(1,0) -- Membuat sudut menjadi lingkaran
+        -- Menyembunyikan semua elemen di dalam MainFrame kecuali sjLabel
+        for _,child in ipairs(MainFrame:GetChildren()) do
+            if child:IsA("GuiObject") and child ~= sjLabel then -- Jangan sembunyikan header
+                child.Visible = false
+            end
+        end
+        sjLabel.Visible = true -- Menampilkan sjLabel ("TP" kecil)
+        MinimizeButton.Text = "+" -- Mengubah teks tombol minimize menjadi "+"
+    else
+        -- Menampilkan kembali semua elemen
+        for _,child in ipairs(MainFrame:GetChildren()) do
+            if child:IsA("GuiObject") then
+                child.Visible = true
+            end
+        end
+        sjLabel.Visible = false -- Menyembunyikan sjLabel
+        corner.CornerRadius = UDim.new(0,8) -- Mengembalikan sudut ke bentuk semula
+        -- Animasi ukuran MainFrame kembali ke ukuran normal
+        MainFrame:TweenSize(UDim2.new(0,280,0,280),"Out","Quad",0.3,true)
+        MinimizeButton.Text = "-" -- Mengubah teks tombol minimize menjadi "-"
+    end
+end
+
+-- Variabel untuk fungsi dragging (menggeser GUI)
+local dragging, dragInput, dragStart, startPos
+
+-- Fungsi untuk memperbarui posisi GUI saat digeser
+local function update(input)
+    local delta = input.Position - dragStart -- Perubahan posisi mouse/sentuhan
+    -- Mengatur posisi MainFrame berdasarkan perubahan delta
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                                   startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+-- Fungsi untuk menyiapkan fungsionalitas dragging pada elemen GUI
+local function setupDrag(element)
+    element.InputBegan:Connect(function(input)
+        -- Memulai dragging saat mouse kiri atau sentuhan dimulai
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true -- Mengatur status dragging menjadi true
+            dragStart = input.Position -- Menyimpan posisi awal mouse/sentuhan
+            startPos = MainFrame.Position -- Menyimpan posisi awal MainFrame
+            -- Menghentikan dragging saat input berakhir
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    element.InputChanged:Connect(function(input)
+        -- Memperbarui dragInput saat mouse/sentuhan bergerak
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+end
+
+-- Menerapkan fungsionalitas dragging pada header dan sjLabel
+setupDrag(header)
+setupDrag(sjLabel)
+-- Menghubungkan update posisi GUI ke event InputChanged global
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input) -- Memperbarui posisi GUI jika sedang digeser
+    end
+end)
+
+--[[
+    Bagian 8: Menghubungkan Aksi ke Tombol-tombol
+    --------------------------------------------
+    Menghubungkan fungsi-fungsi yang telah dibuat ke event klik
+    pada tombol-tombol GUI.
+]]
+
+addTPButton.MouseButton1Click:Connect(addTeleport) -- Tombol Add Teleport (dengan konfirmasi)
+tpAllButton.MouseButton1Click:Connect(teleportAll) -- Tombol Teleport All
+
+-- Logika untuk tombol plus (+) delay (menambah 0.1 detik)
+plusBtn.MouseButton1Click:Connect(function() 
+    local current = tonumber(timeBox.Text) or 1
+    timeBox.Text = string.format("%.1f", math.min(current + 0.1, 60)) -- Maksimal 60 detik
+end)
+-- Logika untuk tombol minus (-) delay (mengurangi 0.1 detik)
+minusBtn.MouseButton1Click:Connect(function() 
+    local current = tonumber(timeBox.Text) or 1
+    timeBox.Text = string.format("%.1f", math.max(current - 0.1, 0.1)) -- Minimal 0.1 detik
+end)
+
+-- Logika untuk tombol plus (+) repeat count (menambah 1)
+repeatPlusBtn.MouseButton1Click:Connect(function() 
+    local current = tonumber(repeatBox.Text) or 1
+    repeatBox.Text = tostring(math.min(current + 1, 100)) -- Maksimal 100 pengulangan
+end)
+-- Logika untuk tombol minus (-) repeat count (mengurangi 1)
+repeatMinusBtn.MouseButton1Click:Connect(function() 
+    local current = tonumber(repeatBox.Text) or 1
+    repeatBox.Text = tostring(math.max(current - 1, 1)) -- Minimal 1 pengulangan
+end)
+
+rejoinBtn.MouseButton1Click:Connect(rejoin) -- Tombol Rejoin
+saveBtn.MouseButton1Click:Connect(saveSettings) -- Tombol Save Settings
+MinimizeButton.MouseButton1Click:Connect(toggleMinimize) -- Tombol Minimize
+sjLabel.MouseButton1Click:Connect(toggleMinimize) -- sjLabel (saat diminimalkan)
+CloseButton.MouseButton1Click:Connect(function() teleportGui:Destroy() end) -- Tombol Close (menghancurkan GUI)
+
+--[[
+    Bagian 9: Pemuatan Data Awal Saat Script Dimulai
+    -----------------------------------------------
+    Memuat data teleportasi dan pengaturan saat script pertama kali dijalankan
+    agar GUI menampilkan informasi yang tersimpan.
+]]
+
+loadTeleportData() -- Memuat data teleportasi
+refreshTeleportList() -- Memperbarui tampilan daftar teleport
+loadSettings() -- Memuat pengaturan (delay, repeat, auto respawn)
