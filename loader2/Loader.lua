@@ -1,11 +1,12 @@
 -- Loader.lua
+local base,,="https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/loader2
 local links = {
-    Utils = "https://example.com/Utils.lua",
-    Speed = "https://example.com/Speed.lua",
-    Headlamp = "https://example.com/Headlamp.lua",
-    Bright = "https://example.com/Bright.lua",
-    GodMode = "https://example.com/GodMode.lua",
-    InfinityJump = "https://example.com/InfinityJump.lua"
+    Utils = base.."/Utils.lua",
+    Speed = base.."/Speed.lua",
+    Headlamp = base.."/Headlamp.lua",
+    Bright = base.."/Bright.lua",
+    GodMode = base.."/GodMode.lua",
+    InfinityJump = base.."/InfinityJump.lua"
 }
 
 local Utils = loadstring(game:HttpGet(links.Utils))()
