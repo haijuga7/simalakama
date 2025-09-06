@@ -76,4 +76,94 @@ return function()
         end
     end
     
-    function Bright
+    function BrightMode.connectLightingEvents()
+        -- Cleanup existing connections
+        brightConnections = Utils.cleanupConnections(brightConnections)
+        
+        if brightModeEnabled then
+            local Lighting = Services.Lighting
+            
+            -- Monitor lighting properties dan force nilai bright mode
+            table.insert(brightConnections, Lighting:GetPropertyChangedSignal("FogStart"):Connect(function()
+                if brightModeEnabled then 
+                    Lighting.FogStart = 1e6 
+                end
+            end))
+            
+            table.insert(brightConnections, Lighting:GetPropertyChangedSignal("FogEnd"):Connect(function()
+                if brightModeEnabled then 
+                    Lighting.FogEnd = 1e6 
+                end
+            end))
+            
+            table.insert(brightConnections, Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
+                if brightModeEnabled then 
+                    Lighting.ClockTime = 12 
+                end
+            end))
+            
+            table.insert(brightConnections, Lighting:GetPropertyChangedSignal("Brightness"):Connect(function()
+                if brightModeEnabled then 
+                    Lighting.Brightness = 3 
+                end
+            end))
+            
+            table.insert(brightConnections, Lighting:GetPropertyChangedSignal("ExposureCompensation"):Connect(function()
+                if brightModeEnabled then 
+                    Lighting.ExposureCompensation = 0.5 
+                end
+            end))
+            
+            table.insert(brightConnections, Lighting:GetPropertyChangedSignal("Ambient"):Connect(function()
+                if brightModeEnabled then 
+                    Lighting.Ambient = Color3.fromRGB(128, 128, 128) 
+                end
+            end))
+            
+            table.insert(brightConnections, Lighting:GetPropertyChangedSignal("OutdoorAmbient"):Connect(function()
+                if brightModeEnabled then 
+                    Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128) 
+                end
+            end))
+            
+            print("🌅 Lighting event monitors connected")
+        end
+    end
+    
+    function BrightMode.toggle()
+        brightModeEnabled = not brightModeEnabled
+        Utils.toggleButton(brightToggle, brightModeEnabled)
+        BrightMode.applyBrightMode(brightModeEnabled)
+        BrightMode.connectLightingEvents()
+    end
+    
+    function BrightMode.getState()
+        return {
+            enabled = brightModeEnabled
+        }
+    end
+    
+    function BrightMode.setState(state)
+        brightModeEnabled = state.enabled or false
+        if brightToggle then
+            Utils.toggleButton(brightToggle, brightModeEnabled)
+        end
+        BrightMode.applyBrightMode(brightModeEnabled)
+        BrightMode.connectLightingEvents()
+    end
+    
+    function BrightMode.cleanup()
+        brightConnections = Utils.cleanupConnections(brightConnections)
+        BrightMode.applyBrightMode(false)
+        print("🌅 Bright Mode cleaned up")
+    end
+    
+    -- Auto-cleanup when module is destroyed
+    game:GetService("Players").PlayerRemoving:Connect(function(player)
+        if player == Services.LocalPlayer then
+            BrightMode.cleanup()
+        end
+    end)
+    
+    return BrightMode
+end
