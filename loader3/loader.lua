@@ -14,14 +14,14 @@ print("🔄 Loading Player Settings...")
 
 -- URLs untuk setiap module (ganti dengan URL paste-bin kamu)
 local MODULES = {
+    Utils = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/loader3/Utils.lua",
     GUI = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/loader3/GUI.lua", 
     WalkSpeed = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/loader3/walkspeed.lua",
     Headlamp = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/loader3/headlamp.lua", 
     BrightMode = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/loader3/brightmode.lua",
     GodMode = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/loader3/godmode.lua",
     InfinityJump = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/loader3/infjump.lua",
-    Teleport = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/loader3/teleport.lua",
-    Utils = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/loader3/Utils.lua"
+    Teleport = "https://raw.githubusercontent.com/haijuga7/simalakama/refs/heads/main/loader3/teleport.lua"
 }
 
 -- Global storage untuk sharing antar module
