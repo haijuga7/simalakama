@@ -53,10 +53,10 @@ local function loadModule(name, url)
             print("✅ " .. name .. " module loaded successfully!")
             return true
         else
-            warn("❌ Failed to compile " .. name .. " module")
+            print("❌ Failed to compile " .. name .. " module")
         end
     else
-        warn("❌ Failed to fetch " .. name .. " module:", result)
+        print("❌ Failed to fetch " .. name .. " module:", result)
     end
     return false
 end
@@ -66,7 +66,7 @@ local loadOrder = {"Utils", "GUI", "WalkSpeed", "Headlamp", "BrightMode", "GodMo
 
 for _, moduleName in ipairs(loadOrder) do
     if not loadModule(moduleName, MODULES[moduleName]) then
-        error("Failed to load required module: " .. moduleName)
+        print("Failed to load required module: " .. moduleName)
     end
 end
 
