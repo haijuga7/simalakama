@@ -4,6 +4,80 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
+-- Fungsi untuk membuat elemen UI
+local function createLabel(parent, text, position, size)
+    local label = Instance.new("TextLabel")
+    label.Text = text
+    label.Size = size or UDim2.new(0.7, 0, 0, 20)
+    label.Position = position
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 14
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = parent
+    return label
+end
+
+local function createToggle(parent, position)
+    local toggle = Instance.new("TextButton")
+    toggle.Size = UDim2.new(0, 40, 0, 20)
+    toggle.Position = position
+    toggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    toggle.Text = "OFF"
+    toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggle.Font = Enum.Font.GothamBold
+    toggle.TextSize = 12
+    toggle.Parent = parent
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = toggle
+    
+    return toggle
+end
+
+local function createSlider(parent, position)
+    local slider = Instance.new("Frame")
+    slider.Size = UDim2.new(1, 0, 0, 20)
+    slider.Position = position
+    slider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    slider.Parent = parent
+    
+    local sliderCorner = Instance.new("UICorner")
+    sliderCorner.CornerRadius = UDim.new(0, 10)
+    sliderCorner.Parent = slider
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new(0.2, 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+    fill.Parent = slider
+    
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 10)
+    fillCorner.Parent = fill
+    
+    return slider, fill
+end
+
+local function createButton(parent, text, position)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, 0, 0, 30)
+    button.Position = position
+    button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 14
+    button.Parent = parent
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = button
+    
+    return button
+end
+
 -- Buat ScreenGui
 local playerGuiUI = Instance.new("ScreenGui")
 playerGuiUI.Name = "PlayerGuiUI"
@@ -11,9 +85,9 @@ playerGuiUI.Parent = PlayerGui
 playerGuiUI.ResetOnSpawn = false
 playerGuiUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Frame utama
+-- Frame utama (diperkecil menjadi 250 lebar)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 280, 0, 280)
+MainFrame.Size = UDim2.new(0, 250, 0, 280)
 MainFrame.Position = UDim2.new(0, 100, 0, 50)
 MainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 MainFrame.BorderSizePixel = 0
@@ -37,7 +111,7 @@ Title.Position = UDim2.new(0, 10, 0, 0)
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
+Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = header
 
@@ -49,7 +123,7 @@ MinimizeButton.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
 MinimizeButton.Text = "-"
 MinimizeButton.TextColor3 = Color3.fromRGB(0, 0, 0)
 MinimizeButton.Font = Enum.Font.GothamBold
-MinimizeButton.TextSize = 16
+MinimizeButton.TextSize = 14
 MinimizeButton.Parent = header
 local MinimizeCorner = Instance.new("UICorner")
 MinimizeCorner.CornerRadius = UDim.new(0, 15)
@@ -63,7 +137,7 @@ CloseButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseButton.Font = Enum.Font.GothamBold
-CloseButton.TextSize = 16
+CloseButton.TextSize = 14
 CloseButton.Parent = header
 local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 15)
@@ -76,7 +150,7 @@ sjLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 sjLabel.Text = "SJ"
 sjLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 sjLabel.Font = Enum.Font.GothamBold
-sjLabel.TextSize = 18
+sjLabel.TextSize = 16
 sjLabel.TextScaled = true
 sjLabel.Visible = false
 sjLabel.Parent = MainFrame
@@ -84,180 +158,41 @@ local sjCorner = Instance.new("UICorner")
 sjCorner.CornerRadius = UDim.new(1, 0)
 sjCorner.Parent = sjLabel
 
--- Content container
+-- Content container dengan scroll
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Size = UDim2.new(1, -10, 1, -40)
+scrollFrame.Position = UDim2.new(0, 5, 0, 35)
+scrollFrame.BackgroundTransparency = 1
+scrollFrame.ScrollBarThickness = 5
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 240)
+scrollFrame.Parent = MainFrame
+
+-- Content frame di dalam scroll
 local contentFrame = Instance.new("Frame")
-contentFrame.Size = UDim2.new(1, -10, 1, -40)
-contentFrame.Position = UDim2.new(0, 5, 0, 35)
+contentFrame.Size = UDim2.new(1, 0, 1, 0)
 contentFrame.BackgroundTransparency = 1
-contentFrame.Parent = MainFrame
+contentFrame.Parent = scrollFrame
 
--- Toggle Speed
-local speedToggle = Instance.new("TextButton")
-speedToggle.Size = UDim2.new(0, 40, 0, 20)
-speedToggle.Position = UDim2.new(1, -40, 0, 2)
-speedToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-speedToggle.Text = "OFF"
-speedToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedToggle.Font = Enum.Font.GothamBold
-speedToggle.TextSize = 12
-speedToggle.Parent = contentFrame
-local speedToggleCorner = Instance.new("UICorner")
-speedToggleCorner.CornerRadius = UDim.new(0, 10)
-speedToggleCorner.Parent = speedToggle
+-- Buat UI elements menggunakan fungsi
+local speedLabel = createLabel(contentFrame, "Walk Speed", UDim2.new(0, 0, 0, 0))
+local speedToggle = createToggle(contentFrame, UDim2.new(1, -40, 0, 2))
 
-local speedLabel = Instance.new("TextLabel")
-speedLabel.Text = "Walk Speed"
-speedLabel.Size = UDim2.new(0.7, 0, 0, 20)
-speedLabel.Position = UDim2.new(0, 0, 0, 0)
-speedLabel.BackgroundTransparency = 1
-speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedLabel.Font = Enum.Font.Gotham
-speedLabel.TextSize = 14
-speedLabel.TextXAlignment = Enum.TextXAlignment.Left
-speedLabel.Parent = contentFrame
+local walkSpeedLabel = createLabel(contentFrame, "Walk Speed: 16", UDim2.new(0, 0, 0, 30), UDim2.new(1, 0, 0, 20))
+local walkSpeedSlider, walkSpeedFill = createSlider(contentFrame, UDim2.new(0, 0, 0, 55))
 
-local walkSpeedLabel = Instance.new("TextLabel")
-walkSpeedLabel.Text = "Walk Speed: 16"
-walkSpeedLabel.Size = UDim2.new(1, 0, 0, 20)
-walkSpeedLabel.Position = UDim2.new(0, 0, 0, 30)
-walkSpeedLabel.BackgroundTransparency = 1
-walkSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-walkSpeedLabel.Font = Enum.Font.Gotham
-walkSpeedLabel.TextSize = 14
-walkSpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
-walkSpeedLabel.Parent = contentFrame
+local headlampLabel = createLabel(contentFrame, "Headlamp", UDim2.new(0, 0, 0, 85))
+local headlampToggle = createToggle(contentFrame, UDim2.new(1, -40, 0, 85))
 
--- WalkSpeed slider
-local walkSpeedSlider = Instance.new("Frame")
-walkSpeedSlider.Size = UDim2.new(1, 0, 0, 20)
-walkSpeedSlider.Position = UDim2.new(0, 0, 0, 55)
-walkSpeedSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-walkSpeedSlider.Parent = contentFrame
-local walkSpeedSliderCorner = Instance.new("UICorner")
-walkSpeedSliderCorner.CornerRadius = UDim.new(0, 10)
-walkSpeedSliderCorner.Parent = walkSpeedSlider
+local brightLabel = createLabel(contentFrame, "No Fog & Bright Mode", UDim2.new(0, 0, 0, 115))
+local brightToggle = createToggle(contentFrame, UDim2.new(1, -40, 0, 115))
 
-local walkSpeedFill = Instance.new("Frame")
-walkSpeedFill.Size = UDim2.new(0.2, 0, 1, 0)
-walkSpeedFill.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
-walkSpeedFill.Parent = walkSpeedSlider
-local walkSpeedFillCorner = Instance.new("UICorner")
-walkSpeedFillCorner.CornerRadius = UDim.new(0, 10)
-walkSpeedFillCorner.Parent = walkSpeedFill
+local godLabel = createLabel(contentFrame, "God Mode", UDim2.new(0, 0, 0, 145))
+local godToggle = createToggle(contentFrame, UDim2.new(1, -40, 0, 145))
 
--- Headlamp toggle
-local headlampToggle = Instance.new("TextButton")
-headlampToggle.Size = UDim2.new(0, 40, 0, 20)
-headlampToggle.Position = UDim2.new(1, -40, 0, 85)
-headlampToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-headlampToggle.Text = "OFF"
-headlampToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-headlampToggle.Font = Enum.Font.GothamBold
-headlampToggle.TextSize = 12
-headlampToggle.Parent = contentFrame
-local headlampToggleCorner = Instance.new("UICorner")
-headlampToggleCorner.CornerRadius = UDim.new(0, 10)
-headlampToggleCorner.Parent = headlampToggle
+local infinityJumpLabel = createLabel(contentFrame, "Infinity Jump", UDim2.new(0, 0, 0, 175))
+local infinityJumpToggle = createToggle(contentFrame, UDim2.new(1, -40, 0, 175))
 
-local headlampLabel = Instance.new("TextLabel")
-headlampLabel.Text = "Headlamp"
-headlampLabel.Size = UDim2.new(0.7, 0, 0, 20)
-headlampLabel.Position = UDim2.new(0, 0, 0, 85)
-headlampLabel.BackgroundTransparency = 1
-headlampLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-headlampLabel.Font = Enum.Font.Gotham
-headlampLabel.TextSize = 14
-headlampLabel.TextXAlignment = Enum.TextXAlignment.Left
-headlampLabel.Parent = contentFrame
-
--- No Fog & Bright Mode toggle
-local brightToggle = Instance.new("TextButton")
-brightToggle.Size = UDim2.new(0, 40, 0, 20)
-brightToggle.Position = UDim2.new(1, -40, 0, 115)
-brightToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-brightToggle.Text = "OFF"
-brightToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-brightToggle.Font = Enum.Font.GothamBold
-brightToggle.TextSize = 12
-brightToggle.Parent = contentFrame
-local brightToggleCorner = Instance.new("UICorner")
-brightToggleCorner.CornerRadius = UDim.new(0, 10)
-brightToggleCorner.Parent = brightToggle
-
-local brightLabel = Instance.new("TextLabel")
-brightLabel.Text = "No Fog & Bright Mode"
-brightLabel.Size = UDim2.new(0.7, 0, 0, 20)
-brightLabel.Position = UDim2.new(0, 0, 0, 115)
-brightLabel.BackgroundTransparency = 1
-brightLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-brightLabel.Font = Enum.Font.Gotham
-brightLabel.TextSize = 14
-brightLabel.TextXAlignment = Enum.TextXAlignment.Left
-brightLabel.Parent = contentFrame
-
--- GodMode toggle
-local godToggle = Instance.new("TextButton")
-godToggle.Size = UDim2.new(0, 40, 0, 20)
-godToggle.Position = UDim2.new(1, -40, 0, 145)
-godToggle.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-godToggle.Text = "OFF"
-godToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-godToggle.Font = Enum.Font.GothamBold
-godToggle.TextSize = 12
-godToggle.Parent = contentFrame
-local godToggleCorner = Instance.new("UICorner")
-godToggleCorner.CornerRadius = UDim.new(0, 10)
-godToggleCorner.Parent = godToggle
-
-local godLabel = Instance.new("TextLabel")
-godLabel.Text = "God Mode"
-godLabel.Size = UDim2.new(0.7, 0, 0, 20)
-godLabel.Position = UDim2.new(0, 0, 0, 145)
-godLabel.BackgroundTransparency = 1
-godLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-godLabel.Font = Enum.Font.Gotham
-godLabel.TextSize = 14
-godLabel.TextXAlignment = Enum.TextXAlignment.Left
-godLabel.Parent = contentFrame
-
--- Infinity Jump toggle
-local infinityJumpToggle = Instance.new("TextButton")
-infinityJumpToggle.Size = UDim2.new(0, 40, 0, 20)
-infinityJumpToggle.Position = UDim2.new(1, -40, 0, 175)
-infinityJumpToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-infinityJumpToggle.Text = "OFF"
-infinityJumpToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-infinityJumpToggle.Font = Enum.Font.GothamBold
-infinityJumpToggle.TextSize = 12
-infinityJumpToggle.Parent = contentFrame
-local infinityJumpToggleCorner = Instance.new("UICorner")
-infinityJumpToggleCorner.CornerRadius = UDim.new(0, 10)
-infinityJumpToggleCorner.Parent = infinityJumpToggle
-
-local infinityJumpLabel = Instance.new("TextLabel")
-infinityJumpLabel.Text = "Infinity Jump"
-infinityJumpLabel.Size = UDim2.new(0.7, 0, 0, 20)
-infinityJumpLabel.Position = UDim2.new(0, 0, 0, 175)
-infinityJumpLabel.BackgroundTransparency = 1
-infinityJumpLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-infinityJumpLabel.Font = Enum.Font.Gotham
-infinityJumpLabel.TextSize = 14
-infinityJumpLabel.TextXAlignment = Enum.TextXAlignment.Left
-infinityJumpLabel.Parent = contentFrame
-
--- Teleport button
-local teleportButton = Instance.new("TextButton")
-teleportButton.Size = UDim2.new(1, 0, 0, 30)
-teleportButton.Position = UDim2.new(0, 0, 0, 205)
-teleportButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-teleportButton.Text = "Open Teleport Menu"
-teleportButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-teleportButton.Font = Enum.Font.GothamBold
-teleportButton.TextSize = 14
-teleportButton.Parent = contentFrame
-local teleportButtonCorner = Instance.new("UICorner")
-teleportButtonCorner.CornerRadius = UDim.new(0, 8)
-teleportButtonCorner.Parent = teleportButton
+local teleportButton = createButton(contentFrame, "Open Teleport Menu", UDim2.new(0, 0, 0, 205))
 
 -- LOGIC
 local defaultWalkSpeed = 16
@@ -287,7 +222,7 @@ end
 -- Teleport menu
 local teleportFrame = Instance.new("Frame")
 teleportFrame.Size = UDim2.new(0, 200, 0, 150)
-teleportFrame.Position = MainFrame.Position + UDim2.new(0, 300, 0, 0)
+teleportFrame.Position = MainFrame.Position + UDim2.new(0, 260, 0, 0)
 teleportFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 teleportFrame.Visible = false
 teleportFrame.Parent = playerGuiUI
@@ -304,13 +239,10 @@ local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0, 5)
 
 local function addTeleport(name, pos)
-    local btn = Instance.new("TextButton", scroll)
+    local btn = createButton(scroll, name, UDim2.new(0, 0, 0, 0))
     btn.Size = UDim2.new(1, 0, 0, 30)
     btn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    btn.Text = name
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
+    
     btn.MouseButton1Click:Connect(function()
         local char = LocalPlayer.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
@@ -318,8 +250,6 @@ local function addTeleport(name, pos)
             teleportFrame.Visible = false
         end
     end)
-    local c = Instance.new("UICorner", btn)
-    c.CornerRadius = UDim.new(0, 8)
 end
 
 addTeleport("Spawn", Vector3.new(0, 5, 0))
@@ -350,7 +280,7 @@ local function toggleMinimize()
         sjLabel.Visible = true
         MinimizeButton.Text = "+"
     else
-        MainFrame:TweenSize(UDim2.new(0, 280, 0, 280), "Out", "Quad", 0.3, true)
+        MainFrame:TweenSize(UDim2.new(0, 250, 0, 280), "Out", "Quad", 0.3, true)
         corner.CornerRadius = UDim.new(0, 8)
         for _, v in pairs(MainFrame:GetChildren()) do
             if v:IsA("GuiObject") then
@@ -457,6 +387,14 @@ local function applySettingsToCharacter()
     
     if loadedModules.infjump and infinityJumpEnabled then
         loadedModules.infjump.applySettings()
+    end
+    
+    if loadedModules.godmode and godModeEnabled then
+        loadedModules.godmode.applySettings()
+    end
+    
+    if loadedModules.brightmode and brightModeEnabled then
+        loadedModules.brightmode.applySettings()
     end
 end
 
