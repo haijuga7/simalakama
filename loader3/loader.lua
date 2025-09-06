@@ -38,25 +38,31 @@ _G.PlayerSettings = _G.PlayerSettings or {
 }
 
 -- Function untuk load module
+-- Ganti bagian loadModule function dengan ini:
 local function loadModule(name, url)
     local success, result = pcall(function()
-        -- return game:HttpGet(url) -- Uncomment ini untuk production
-        
-        -- Sementara return placeholder
-        return "return function() print('✅ " .. name .. " module loaded!') end"
+        -- Coba load dari URL
+        local httpContent = game:HttpGet(url, true)
+        return httpContent
     end)
     
     if success then
-        local moduleFunc = loadstring(result)
+        local moduleFunc, errorMsg = loadstring(result)
         if moduleFunc then
             _G.PlayerSettings.Modules[name] = moduleFunc()
             print("✅ " .. name .. " module loaded successfully!")
             return true
         else
-            warn("❌ Failed to compile " .. name .. " module")
+            warn("❌ Failed to compile " .. name .. " module: " .. tostring(errorMsg))
         end
     else
-        warn("❌ Failed to fetch " .. name .. " module:", result)
+        warn("❌ Failed to fetch " .. name .. " module: " .. tostring(result))
+        
+        -- Fallback ke module lokal jika ada
+        if _G.PlayerSettings.Modules[name] then
+            print("⚠️ Using fallback for " .. name .. " module")
+            return true
+        end
     end
     return false
 end
