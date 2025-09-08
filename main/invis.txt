@@ -1,0 +1,202 @@
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local VirtualUser = game:GetService("VirtualUser")
+
+-- Buat ScreenGUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "InvisibilityGUI"
+screenGui.Parent = PlayerGui
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Buat Frame utama
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 200, 0, 50)
+mainFrame.Position = UDim2.new(0.5, -100, 0, 10)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+
+-- Buat tombol invisibility
+local invisButton = Instance.new("TextButton")
+invisButton.Name = "phase3Button4"
+invisButton.Size = UDim2.new(0.9, 0, 0.8, 0)
+invisButton.Position = UDim2.new(0.05, 0, 0.1, 0)
+invisButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+invisButton.BorderSizePixel = 0
+invisButton.Text = "Invis: OFF"
+invisButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+invisButton.Font = Enum.Font.SourceSansBold
+invisButton.TextSize = 14
+invisButton.Parent = mainFrame
+
+-- Script functionality
+local InvisEnabled = false
+local InvisCooldown = false
+local InvisSeat = nil
+local SavedTransparency = {}
+
+-- Set FallenPartsDestroyHeight ke nilai yang sangat rendah
+workspace.FallenPartsDestroyHeight = -100000
+
+-- Fungsi untuk membuat karakter melompat
+local function makeCharacterJump()
+    if Player.Character then
+        local humanoid = Player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid and humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            print("[Invisibility] Character jumped after disabling invisibility")
+        end
+    end
+end
+
+invisButton.MouseButton1Click:Connect(function()
+    if InvisCooldown then return end
+    InvisCooldown = true
+    
+    InvisEnabled = not InvisEnabled
+    local Camera = workspace.CurrentCamera
+
+    if InvisEnabled then
+        invisButton.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
+        invisButton.Text = "Invis: ON"
+        
+        if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then
+            InvisCooldown = false
+            return 
+        end
+        
+        -- Simpan posisi dan state karakter
+        local SavedPos = Player.Character.HumanoidRootPart.CFrame
+        
+        -- Buat karakter transparan
+        for _, part in ipairs(Player.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                SavedTransparency[part] = part.Transparency
+                part.Transparency = 1
+                part.CanCollide = false
+            elseif part:IsA("Accessory") and part:FindFirstChild("Handle") then
+                local handle = part.Handle
+                SavedTransparency[handle] = handle.Transparency
+                handle.Transparency = 1
+                handle.CanCollide = false
+            end
+        end
+        
+        Camera.CameraType = Enum.CameraType.Scriptable
+        Player.Character:MoveTo(Vector3.new(0, -10000, 0))
+        wait(0.15)
+
+        -- Buat seat transparan di posisi asli
+        InvisSeat = Instance.new('Seat', workspace)
+        InvisSeat.Anchored = false
+        InvisSeat.CanCollide = false
+        InvisSeat.Name = 'InvisChair'
+        InvisSeat.Transparency = 1
+        InvisSeat.Size = Vector3.new(2, 1, 2)
+        
+        -- Cari torso yang tepat (R6 atau R15)
+        local torso = Player.Character:FindFirstChild("Torso") or Player.Character:FindFirstChild("UpperTorso")
+        if torso then
+            local Weld = Instance.new("Weld", InvisSeat)
+            Weld.Part0 = InvisSeat
+            Weld.Part1 = torso
+        end
+        
+        InvisSeat.CFrame = SavedPos
+        Camera.CFrame = CFrame.new(InvisSeat.Position + Vector3.new(0, 5, 10), InvisSeat.Position)
+        Camera.CameraType = Enum.CameraType.Custom
+        
+        -- Handle kematian karakter
+        local humanoid = Player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.Died:Connect(function()
+                if InvisEnabled then
+                    InvisEnabled = false
+                    invisButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+                    invisButton.Text = "Invis: OFF"
+                    
+                    if InvisSeat then
+                        InvisSeat:Destroy()
+                        InvisSeat = nil
+                    end
+                end
+            end)
+        end
+    else
+        -- Nonaktifkan invisibility
+        invisButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        invisButton.Text = "Invis: OFF"
+
+        if InvisSeat then
+            local character = Player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                makeCharacterJump()
+                character:MoveTo(InvisSeat.Position)
+                
+                -- Kembalikan transparency karakter
+                for part, transparency in pairs(SavedTransparency) do
+                    if part and part.Parent then
+                        part.Transparency = transparency
+                        part.CanCollide = true
+                    end
+                end
+                SavedTransparency = {}
+                
+            end
+            InvisSeat:Destroy()
+            InvisSeat = nil
+        end
+    end
+
+    wait(0.5) -- Cooldown lebih lama untuk mencegah masalah
+    InvisCooldown = false
+end)
+
+-- Buat rounded corners (optional)
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 6)
+UICorner.Parent = invisButton
+
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 8)
+frameCorner.Parent = mainFrame
+
+-- Buat drag functionality untuk frame
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType ==  then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
