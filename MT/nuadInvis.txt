@@ -1,0 +1,365 @@
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
+local Debris = game:GetService("Debris")
+local StarterGui = game:GetService("StarterGui")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Anti AFK
+local VirtualUser = game:GetService("VirtualUser")
+Players.LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+    print("[TeleportController] Anti AFK triggered")
+end)
+
+local function makeCharacterJump()
+    if Player.Character then
+        local humanoid = Player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid and humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            print("[Invisibility] Character jumped")
+            wait(0.3)
+        end
+    end
+end
+
+-- Daftar posisi teleport (ganti dengan posisi yang Anda inginkan)
+local teleportSequence = {
+    {pos = Vector3.new(-620.9, 250.1, -384.4), waitTime = 7, notif = "(1/5)"},
+    {pos = Vector3.new(-1201.5, 261.4, -487.5), waitTime = 30, notif = "(2/5)"},
+    {pos = Vector3.new(-1399.8, 578.2, -949.3), waitTime = 60, notif = "(3/5)"},
+    {pos = Vector3.new(-1699.1, 816.5, -1399.1), waitTime = 90, notif = "(4/5)"},
+    {pos = Vector3.new(-3192.3,1726.7,-2616.9), waitTime = 90, notif = "(5/5)"}
+}
+
+local function playNotificationSound()
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+    sound.Volume = 3
+    sound.Parent = workspace
+    sound:Play()
+    Debris:AddItem(sound, 2)
+end
+
+-- Fungsi menampilkan notifikasi
+local function showNotification(title, text, duration)
+    StarterGui:SetCore("SendNotification", {
+        Title = title or "Notification",
+        Text = text or "",
+        Duration = duration or 3
+    })
+end
+
+-- Variabel kontrol
+local isTeleporting = false
+
+-- Membuat GUI
+local teleportGui = Instance.new("ScreenGui")
+teleportGui.Name = "TeleportGUI"
+teleportGui.Parent = PlayerGui
+teleportGui.ResetOnSpawn = false
+
+-- Frame utama
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 200, 0, 120)
+mainFrame.Position = UDim2.new(0, 100, 0, 100)
+mainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = teleportGui
+
+-- Membuat sudut membulat
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 8)
+corner.Parent = mainFrame
+
+-- Header untuk drag functionality
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 30)
+header.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+header.BorderSizePixel = 0
+header.Parent = mainFrame
+
+-- Sudut membulat untuk header
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 8)
+headerCorner.Parent = header
+
+-- Judul
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 1, 0)
+title.BackgroundTransparency = 1
+title.Text = "Mt. Daun Teleport"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Parent = header
+
+-- Tombol Close GUI
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0,25,0,25)
+CloseButton.Position = UDim2.new(1,-30,0,2.5) -- 30 pixel dari kanan, 2.5 pixel dari atas
+CloseButton.BackgroundColor3 = Color3.fromRGB(200,60,60) -- Warna merah
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255,255,255) -- Teks putih
+CloseButton.Font = Enum.Font.Gotham
+CloseButton.TextSize = 12
+CloseButton.Parent = header
+
+-- Sudut membulat untuk Tombol Close
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0,12.5)
+CloseCorner.Parent = CloseButton
+
+-- Toggle untuk teleport
+local toggleFrame = Instance.new("Frame")
+toggleFrame.Size = UDim2.new(0.8, 0, 0, 30)
+toggleFrame.Position = UDim2.new(0.1, 0, 0, 40)
+toggleFrame.BackgroundTransparency = 1
+toggleFrame.Parent = mainFrame
+
+local toggleLabel = Instance.new("TextLabel")
+toggleLabel.Size = UDim2.new(0.6, 0, 1, 0)
+toggleLabel.BackgroundTransparency = 1
+toggleLabel.Text = "Auto Teleport:"
+toggleLabel.Font = Enum.Font.Gotham
+toggleLabel.TextSize = 12
+toggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+toggleLabel.Parent = toggleFrame
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0.3, 0, 0.7, 0)
+toggleButton.Position = UDim2.new(0.65, 0, 0.15, 0)
+toggleButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+toggleButton.Text = "OFF"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.TextSize = 12
+toggleButton.Parent = toggleFrame
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 8)
+toggleCorner.Parent = toggleButton
+
+-- Tombol Rejoin
+local rejoinButton = Instance.new("TextButton")
+rejoinButton.Size = UDim2.new(0.8, 0, 0, 30)
+rejoinButton.Position = UDim2.new(0.1, 0, 0, 80)
+rejoinButton.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+rejoinButton.Text = "Rejoin"
+rejoinButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+rejoinButton.Font = Enum.Font.GothamBold
+rejoinButton.TextSize = 12
+rejoinButton.Parent = mainFrame
+
+local rejoinCorner = Instance.new("UICorner")
+rejoinCorner.CornerRadius = UDim.new(0, 8)
+rejoinCorner.Parent = rejoinButton
+
+-- Fungsi untuk auto respawn
+local function autoRespawn()
+    LocalPlayer.Character:BreakJoints()
+    
+    wait(3) -- Tunggu respawn
+end
+
+-- Fungsi untuk rejoin
+local function rejoinGame()
+    game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+end
+
+-- Variabel untuk script functionality
+local InvisEnabled = false
+local InvisSeat = nil
+local SavedTransparency = {}
+
+-- Set FallenPartsDestroyHeight ke nilai yang sangat rendah
+local originalDestroyHeight = workspace.FallenPartsDestroyHeight
+
+-- Fungsi untuk mengaktifkan invisibility
+local function enableInvisibility()
+    if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then
+        return false
+    end
+    
+    -- Simpan posisi dan state karakter
+    local SavedPos = Player.Character.HumanoidRootPart.CFrame
+    local Camera = workspace.CurrentCamera
+    
+    -- Set FallenPartsDestroyHeight ke nilai rendah
+    workspace.FallenPartsDestroyHeight = -100000
+    
+    -- makeCharacterJump()
+    Camera.CameraType = Enum.CameraType.Scriptable
+    Player.Character:MoveTo(Vector3.new(60.3,13.0,24.7))
+    wait(0.15)
+    
+    -- Buat seat transparan di posisi asli
+    InvisSeat = Instance.new('Seat', workspace)
+    InvisSeat.Anchored = false
+    InvisSeat.CanCollide = false
+    InvisSeat.Name = 'InvisChair'
+    InvisSeat.Transparency = 1
+    InvisSeat.Size = Vector3.new(2, 1, 2)
+
+    -- Cari torso yang tepat (R6 atau R15)
+    local torso = Player.Character:FindFirstChild("Torso") or Player.Character:FindFirstChild("UpperTorso")
+    if torso then
+        local Weld = Instance.new("Weld", InvisSeat)
+        Weld.Part0 = InvisSeat
+        Weld.Part1 = torso
+    end
+
+    InvisSeat.CFrame = SavedPos
+    Camera.CFrame = CFrame.new(InvisSeat.Position + Vector3.new(0, 5, 10), InvisSeat.Position)
+    Camera.CameraType = Enum.CameraType.Custom
+
+    print("[Invisibility] Invisibility enabled")
+    return true
+end
+
+-- Fungsi untuk menonaktifkan invisibility
+local function disableInvisibility()
+    -- makeCharacterJump()
+    
+    -- Hapus seat
+    if InvisSeat then
+        InvisSeat:Destroy()
+        InvisSeat = nil
+    end
+
+    -- Kembalikan FallenPartsDestroyHeight ke nilai semula
+    workspace.FallenPartsDestroyHeight = originalDestroyHeight
+
+    print("[Invisibility] Invisibility disabled")
+end
+
+-- Fungsi toggle invisibility
+local function toggleInvisibility()
+    if InvisEnabled then
+        -- Matikan invisibility
+        InvisEnabled = false
+        showNotification("invisibility", "non active", 3)
+        disableInvisibility()
+    else
+        -- Nyalakan invisibility
+        if enableInvisibility() then
+            showNotification("invisibility", "active", 3)
+            InvisEnabled = true
+        end
+    end
+end
+
+-- Fungsi untuk teleport
+local function teleportToPosition(position)
+    local character = LocalPlayer.Character
+    if character then
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        if humanoidRootPart then
+            humanoidRootPart.CFrame = CFrame.new(position)
+        end
+    end
+end
+
+-- Fungsi utama teleport loop
+local function startTeleportLoop()
+    isTeleporting = true
+    toggleButton.BackgroundColor3 = Color3.fromRGB(60, 200, 60)
+    toggleButton.Text = "ON"
+    
+    -- Pasang koneksi untuk CharacterAdded
+    characterAddedConnection = Player.CharacterAdded:Connect(onCharacterAdded)
+    
+    while isTeleporting do
+        for _, data in ipairs(teleportSequence) do
+            if not isTeleporting then break end
+            toggleInvisibility()
+            
+            wait(data.waitTime)
+            teleportToPosition(data.pos)
+            showNotification("Teleport", data.notif, 3)
+            toggleInvisibility()
+            wait(1)
+        end
+
+        if not isTeleporting then break end
+        showNotification("Summit", "Sudah Summit Ya..", 3)
+        wait(1)
+        autoRespawn()
+    end
+        
+    print("[TeleportController] teleportLoop ended")
+end
+            
+-- Fungsi untuk menghentikan teleport loop
+local function stopTeleportLoop()
+    isTeleporting = false
+    toggleButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+    toggleButton.Text = "OFF"
+end
+
+-- Toggle button functionality
+toggleButton.MouseButton1Click:Connect(function()
+    if isTeleporting then
+        showNotification("Summit", "Sudah Summit Ya..", 3)
+        stopTeleportLoop()
+
+    else
+        showNotification("Teleport", "Teleport Di aktifkan", 3)
+        startTeleportLoop()
+    end
+end)
+
+-- Rejoin button functionality
+rejoinButton.MouseButton1Click:Connect(function()
+    rejoinGame()
+end)
+
+CloseButton.MouseButton1Click:Connect(function() teleportGui:Destroy() end) -- Tombol Close (menghancurkan GUI)
+
+-- Drag functionality
+local dragging = false
+local dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+header.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+-- Cleanup ketika GUI dihapus
+teleportGui.AncestryChanged:Connect(function()
+    if teleportGui.Parent == nil then
+        stopTeleportLoop()
+    end
+end)
