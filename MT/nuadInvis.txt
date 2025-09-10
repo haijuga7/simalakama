@@ -196,7 +196,7 @@ local function enableInvisibility()
     
     -- makeCharacterJump()
     Camera.CameraType = Enum.CameraType.Scriptable
-    Player.Character:MoveTo(Vector3.new(60.3,13.0,24.7))
+    Player.Character:MoveTo(Vector3.new(60.3,-100.0,24.7))
     wait(0.15)
     
     -- Buat seat transparan di posisi asli
