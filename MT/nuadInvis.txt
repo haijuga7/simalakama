@@ -182,11 +182,11 @@ local SavedTransparency = {}
 local originalDestroyHeight = workspace.FallenPartsDestroyHeight
 
 -- Fungsi untuk mengaktifkan invisibility
-local function enableInvisibility()
+local function enableInvisibility(pos)
     if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then
         return false
     end
-    
+    local Koko = pos - Vector3.new(0, 100, 0)
     -- Simpan posisi dan state karakter
     local SavedPos = Player.Character.HumanoidRootPart.CFrame
     local Camera = workspace.CurrentCamera
@@ -196,7 +196,7 @@ local function enableInvisibility()
     
     -- makeCharacterJump()
     Camera.CameraType = Enum.CameraType.Scriptable
-    Player.Character:MoveTo(Vector3.new(60.3,-100.0,24.7))
+    Player.Character:MoveTo(Koko)
     wait(0.15)
     
     -- Buat seat transparan di posisi asli
@@ -240,7 +240,7 @@ local function disableInvisibility()
 end
 
 -- Fungsi toggle invisibility
-local function toggleInvisibility()
+local function toggleInvisibility(pos)
     if InvisEnabled then
         -- Matikan invisibility
         InvisEnabled = false
@@ -248,7 +248,7 @@ local function toggleInvisibility()
         disableInvisibility()
     else
         -- Nyalakan invisibility
-        if enableInvisibility() then
+        if enableInvisibility(pos) then
             showNotification("invisibility", "active", 3)
             InvisEnabled = true
         end
@@ -278,12 +278,12 @@ local function startTeleportLoop()
     while isTeleporting do
         for _, data in ipairs(teleportSequence) do
             if not isTeleporting then break end
-            toggleInvisibility()
+            toggleInvisibility(data.pos)
             
             wait(data.waitTime)
             teleportToPosition(data.pos)
             showNotification("Teleport", data.notif, 3)
-            toggleInvisibility()
+            toggleInvisibility(data.pos)
             wait(1)
         end
 
