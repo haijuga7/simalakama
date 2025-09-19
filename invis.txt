@@ -1,0 +1,130 @@
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local VirtualUser = game:GetService("VirtualUser")
+
+-- Buat ScreenGUI untuk status
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "InvisibilityStatusGUI"
+screenGui.Parent = PlayerGui
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Buat Frame status
+local statusFrame = Instance.new("Frame")
+statusFrame.Name = "StatusFrame"
+statusFrame.Size = UDim2.new(0, 150, 0, 30)
+statusFrame.Position = UDim2.new(0.5, -75, 0, 10)
+statusFrame.AnchorPoint = Vector2.new(0.5, 0)
+statusFrame.BackgroundColor3 = Color3.fromRGB(80, 20, 20)
+statusFrame.BorderSizePixel = 0
+statusFrame.Parent = screenGui
+
+-- Buat teks status
+local statusText = Instance.new("TextLabel")
+statusText.Name = "StatusText"
+statusText.Size = UDim2.new(1, 0, 1, 0)
+statusText.BackgroundTransparency = 1
+statusText.Text = "INVISIBILITY: ACTIVE"
+statusText.TextColor3 = Color3.fromRGB(255, 255, 255)
+statusText.Font = Enum.Font.SourceSansBold
+statusText.TextSize = 14
+statusText.Parent = statusFrame
+
+-- Script functionality
+local InvisEnabled = true  -- Selalu aktif sejak awal
+local InvisSeat = nil
+local SavedTransparency = {}
+
+-- Set FallenPartsDestroyHeight ke nilai yang sangat rendah
+local originalDestroyHeight = workspace.FallenPartsDestroyHeight
+workspace.FallenPartsDestroyHeight = -100000
+
+-- Fungsi untuk menonaktifkan invisibility
+local function disableInvisibility()
+    if not InvisEnabled then return end
+    InvisEnabled = false
+    
+    -- Hapus status GUI
+    if screenGui then screenGui:Destroy() end
+    
+    -- Hapus seat
+    if InvisSeat then
+        InvisSeat:Destroy()
+        InvisSeat = nil
+    end
+    
+    -- Kembalikan FallenPartsDestroyHeight ke nilai semula
+    workspace.FallenPartsDestroyHeight = originalDestroyHeight
+    
+    print("[Invisibility] Invisibility disabled")
+end
+
+-- Aktifkan invisibility saat script dijalankan
+local function enableInvisibility()
+    if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then
+        return 
+    end
+    
+    -- Simpan posisi dan state karakter
+    local SavedPos = Player.Character.HumanoidRootPart.CFrame
+    local Camera = workspace.CurrentCamera
+    
+    Camera.CameraType = Enum.CameraType.Scriptable
+    Player.Character:MoveTo(Vector3.new(SavedPos.X, -1000, SavedPos.Z))
+    wait(0.15)
+
+    -- Buat seat transparan di posisi asli
+    InvisSeat = Instance.new('Seat', workspace)
+    InvisSeat.Anchored = false
+    InvisSeat.CanCollide = false
+    InvisSeat.Name = 'InvisChair'
+    InvisSeat.Transparency = 1
+    InvisSeat.Size = Vector3.new(2, 1, 2)
+    
+    -- Cari torso yang tepat (R6 atau R15)
+    local torso = Player.Character:FindFirstChild("Torso") or Player.Character:FindFirstChild("UpperTorso")
+    if torso then
+        local Weld = Instance.new("Weld", InvisSeat)
+        Weld.Part0 = InvisSeat
+        Weld.Part1 = torso
+    end
+    
+    InvisSeat.CFrame = SavedPos
+    Camera.CFrame = CFrame.new(InvisSeat.Position + Vector3.new(0, 5, 10), InvisSeat.Position)
+    Camera.CameraType = Enum.CameraType.Custom
+    
+    print("[Invisibility] Invisibility enabled")
+end
+
+-- Jalankan invisibility saat karakter tersedia
+if Player.Character then
+    enableInvisibility()
+else
+    Player.CharacterAdded:Connect(function(character)
+        wait(1) -- Tunggu karakter selesai loading
+        enableInvisibility()
+    end)
+end
+
+-- Handle kematian karakter
+Player.CharacterAdded:Connect(function(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid.Died:Connect(function()
+        disableInvisibility()
+    end)
+end)
+
+-- Jika karakter sudah ada saat script dijalankan
+if Player.Character then
+    local humanoid = Player.Character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.Died:Connect(function()
+            disableInvisibility()
+        end)
+    end
+end
+
+-- Buat rounded corners (optional)
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 8)
+frameCorner.Parent = statusFrame
