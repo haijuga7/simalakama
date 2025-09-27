@@ -1,0 +1,64 @@
+local function method1(character, hrp, targetPos)
+    resetAnchor(hrp)
+    hrp.CFrame = CFrame.new(targetPos)
+    task.wait(0.5)
+    return isAtTarget(hrp, targetPos)
+end
+
+local function method2(character, hrp, targetPos)
+    resetAnchor(hrp)
+    local bp = Instance.new("BodyPosition")
+    bp.Parent = hrp
+    bp.MaxForce = Vector3.new(1e6,1e6,1e6)
+    bp.P = 20000
+    bp.D = 1000
+    bp.Position = targetPos
+    task.wait(0.8)
+    bp:Destroy()
+    return isAtTarget(hrp, targetPos)
+end
+
+local function method3(character, hrp, targetPos)
+    resetAnchor(hrp)
+    hrp.CFrame = CFrame.new(targetPos)
+    local anchorPart = Instance.new("Part")
+    anchorPart.Size = Vector3.new(5,1,5)
+    anchorPart.CFrame = hrp.CFrame * CFrame.new(0,-1,0)
+    anchorPart.Anchored = true
+    anchorPart.CanCollide = false
+    anchorPart.Transparency = 1
+    anchorPart.Parent = workspace
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = hrp
+    weld.Part1 = anchorPart
+    weld.Parent = hrp
+    task.wait(0.6)
+    weld:Destroy()
+    anchorPart:Destroy()
+    return isAtTarget(hrp, targetPos)
+end
+
+local function method4(character, hrp, targetPos)
+    resetAnchor(hrp)
+    hrp.CFrame = CFrame.new(targetPos)
+    local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos)})
+    tween:Play()
+    
+    local startTime = tick()
+    while tick()-startTime < 1.5 and not isAtTarget(hrp, targetPos) do
+        task.wait(0.1)
+    end
+    
+    return isAtTarget(hrp, targetPos)
+end
+
+local function method5(character, hrp, targetPos)
+    resetAnchor(hrp)
+    if character.PivotTo then
+        character:PivotTo(CFrame.new(targetPos))
+        task.wait(0.5)
+        return isAtTarget(hrp, targetPos)
+    end
+    return false
+end
