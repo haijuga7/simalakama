@@ -1,4 +1,4 @@
--- EasyGUI Library v2.0 with Minimize and List Layout
+-- EasyGUI Library v2.1 - Fixed Toggle and Hover Issues
 -- Simpan sebagai: https://raw.githubusercontent.com/username/reponame/main/EasyGUI.lua
 
 local EasyGUI = {}
@@ -42,6 +42,7 @@ function EasyGUI.new(guiName, parent)
     self.IsMinimized = false
     self.OriginalSize = nil
     self.OriginalContentSize = nil
+    self.HoverEffects = {} -- Track hover effects for dynamic color updates
     
     return self
 end
@@ -142,7 +143,7 @@ function EasyGUI:CreateHeader(titleText, height, backgroundColor, showCloseButto
     
     -- Title
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -titleWidthOffset, 1, 0)
+    title.Size = UDim2.new(1, -titleWidthOffset - 10, 1, 0)
     title.Position = UDim2.new(0, 10, 0, 0)
     title.BackgroundTransparency = 1
     title.Text = titleText or "GUI Title"
@@ -151,8 +152,6 @@ function EasyGUI:CreateHeader(titleText, height, backgroundColor, showCloseButto
     title.TextColor3 = self.Theme.Text
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
-    
-    local buttons = {}
     
     -- Minimize Button (optional)
     if showMinimizeButton then
@@ -176,7 +175,6 @@ function EasyGUI:CreateHeader(titleText, height, backgroundColor, showCloseButto
         
         self:AddHoverEffect(minimizeButton)
         self.Elements.MinimizeButton = minimizeButton
-        table.insert(buttons, minimizeButton)
     end
     
     -- Close Button (optional)
@@ -201,7 +199,6 @@ function EasyGUI:CreateHeader(titleText, height, backgroundColor, showCloseButto
         
         self:AddHoverEffect(closeButton)
         self.Elements.CloseButton = closeButton
-        table.insert(buttons, closeButton)
     end
     
     -- Enable dragging
@@ -300,17 +297,26 @@ function EasyGUI:CreateToggle(text, size, defaultState, callback, layoutOrder)
     
     local isToggled = defaultState or false
     
+    -- Add hover effect with dynamic color tracking
+    self:AddHoverEffect(toggleButton, function()
+        return isToggled and self.Theme.Success or self.Theme.Danger
+    end)
+    
     toggleButton.MouseButton1Click:Connect(function()
         isToggled = not isToggled
-        toggleButton.BackgroundColor3 = isToggled and self.Theme.Success or self.Theme.Danger
+        local newColor = isToggled and self.Theme.Success or self.Theme.Danger
+        toggleButton.BackgroundColor3 = newColor
         toggleButton.Text = isToggled and "ON" or "OFF"
+        
+        -- Update the hover effect's base color
+        if self.HoverEffects[toggleButton] then
+            self.HoverEffects[toggleButton].originalColor = newColor
+        end
         
         if callback then
             callback(isToggled)
         end
     end)
-    
-    self:AddHoverEffect(toggleButton)
     
     return {
         Frame = toggleFrame,
@@ -318,8 +324,14 @@ function EasyGUI:CreateToggle(text, size, defaultState, callback, layoutOrder)
         GetState = function() return isToggled end,
         SetState = function(state)
             isToggled = state
-            toggleButton.BackgroundColor3 = isToggled and self.Theme.Success or self.Theme.Danger
+            local newColor = isToggled and self.Theme.Success or self.Theme.Danger
+            toggleButton.BackgroundColor3 = newColor
             toggleButton.Text = isToggled and "ON" or "OFF"
+            
+            -- Update the hover effect's base color
+            if self.HoverEffects[toggleButton] then
+                self.HoverEffects[toggleButton].originalColor = newColor
+            end
         end
     }
 end
@@ -368,6 +380,7 @@ function EasyGUI:CreateTextBox(placeholder, size, backgroundColor, cornerRadius,
     textBox.BackgroundColor3 = backgroundColor or self.Theme.Primary
     textBox.Text = ""
     textBox.PlaceholderText = placeholder or "Type here..."
+    textBox.PlaceholderColor3 = Color3.fromRGB(178, 178, 178)
     textBox.TextColor3 = self.Theme.Text
     textBox.Font = self.Theme.Font
     textBox.TextSize = 12
@@ -424,23 +437,38 @@ function EasyGUI:MakeDraggable(dragElement)
     end)
 end
 
-function EasyGUI:AddHoverEffect(button)
-    local originalColor = button.BackgroundColor3
+function EasyGUI:AddHoverEffect(button, colorGetter)
+    -- Store original color or use color getter function
+    local getOriginalColor = colorGetter or function()
+        return button.BackgroundColor3
+    end
+    
+    local hoverData = {
+        originalColor = getOriginalColor(),
+        isHovering = false
+    }
+    self.HoverEffects[button] = hoverData
     
     button.MouseEnter:Connect(function()
+        hoverData.isHovering = true
+        local currentColor = colorGetter and colorGetter() or hoverData.originalColor
+        
         local tween = TweenService:Create(button, TweenInfo.new(0.2), {
             BackgroundColor3 = Color3.fromRGB(
-                math.min(originalColor.R * 255 + 20, 255),
-                math.min(originalColor.G * 255 + 20, 255),
-                math.min(originalColor.B * 255 + 20, 255)
+                math.min(currentColor.R * 255 + 20, 255),
+                math.min(currentColor.G * 255 + 20, 255),
+                math.min(currentColor.B * 255 + 20, 255)
             )
         })
         tween:Play()
     end)
     
     button.MouseLeave:Connect(function()
+        hoverData.isHovering = false
+        local currentColor = colorGetter and colorGetter() or hoverData.originalColor
+        
         local tween = TweenService:Create(button, TweenInfo.new(0.2), {
-            BackgroundColor3 = originalColor
+            BackgroundColor3 = currentColor
         })
         tween:Play()
     end)
@@ -458,6 +486,7 @@ function EasyGUI:Destroy()
     if self.Gui then
         self.Gui:Destroy()
     end
+    self.HoverEffects = {}
 end
 
 function EasyGUI:Show()
