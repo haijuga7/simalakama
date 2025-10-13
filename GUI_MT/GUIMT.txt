@@ -1,4 +1,4 @@
--- EasyGUI Library v2.1 - Fixed Toggle and Hover Issues
+-- EasyGUI Library v2.2 - With Built-in Settings
 -- Simpan sebagai: https://raw.githubusercontent.com/username/reponame/main/EasyGUI.lua
 
 local EasyGUI = {}
@@ -42,7 +42,9 @@ function EasyGUI.new(guiName, parent)
     self.IsMinimized = false
     self.OriginalSize = nil
     self.OriginalContentSize = nil
-    self.HoverEffects = {} -- Track hover effects for dynamic color updates
+    self.HoverEffects = {}
+    self.SettingsOpen = false
+    self.SettingsConfig = {} -- Store settings configuration
     
     return self
 end
@@ -53,6 +55,8 @@ function EasyGUI:CreateMainFrame(size, position, backgroundColor, cornerRadius)
     mainFrame.Position = position or UDim2.new(0, 100, 0, 100)
     mainFrame.BackgroundColor3 = backgroundColor or self.Theme.Primary
     mainFrame.BorderSizePixel = 0
+    mainFrame.Active = true
+    mainFrame.Draggable = true
     mainFrame.Parent = self.Gui
     
     if cornerRadius then
@@ -61,10 +65,10 @@ function EasyGUI:CreateMainFrame(size, position, backgroundColor, cornerRadius)
         corner.Parent = mainFrame
     end
     
-    -- Container untuk content (akan diatur oleh UIListLayout)
+    -- Container untuk content
     local contentContainer = Instance.new("Frame")
     contentContainer.Name = "ContentContainer"
-    contentContainer.Size = UDim2.new(1, 0, 1, -30) -- Tinggi dikurangi header
+    contentContainer.Size = UDim2.new(1, 0, 1, -30)
     contentContainer.Position = UDim2.new(0, 0, 0, 30)
     contentContainer.BackgroundTransparency = 1
     contentContainer.Parent = mainFrame
@@ -104,8 +108,7 @@ function EasyGUI:UpdateContentSize()
     if self.ListLayout and self.ContentContainer then
         local contentSize = self.ListLayout.AbsoluteContentSize
         if contentSize.Y > 0 then
-            -- Adjust main frame size based on content
-            local newHeight = math.max(30 + contentSize.Y + 10, 80) -- Minimum height
+            local newHeight = math.max(30 + contentSize.Y + 10, 80)
             if not self.IsMinimized then
                 self.MainFrame.Size = UDim2.new(
                     self.OriginalSize.X.Scale, 
@@ -118,13 +121,14 @@ function EasyGUI:UpdateContentSize()
     end
 end
 
-function EasyGUI:CreateHeader(titleText, height, backgroundColor, showCloseButton, showMinimizeButton)
+function EasyGUI:CreateHeader(titleText, height, backgroundColor, showCloseButton, showMinimizeButton, showSettingsButton)
     if not self.MainFrame then
         error("Create main frame first!")
     end
     
     height = height or 30
     local header = Instance.new("Frame")
+    header.Name = "Header"
     header.Size = UDim2.new(1, 0, 0, height)
     header.BackgroundColor3 = backgroundColor or self.Theme.Secondary
     header.BorderSizePixel = 0
@@ -138,6 +142,7 @@ function EasyGUI:CreateHeader(titleText, height, backgroundColor, showCloseButto
     local buttonCount = 0
     if showCloseButton then buttonCount = buttonCount + 1 end
     if showMinimizeButton then buttonCount = buttonCount + 1 end
+    if showSettingsButton then buttonCount = buttonCount + 1 end
     
     local titleWidthOffset = buttonCount * 30
     
@@ -153,35 +158,13 @@ function EasyGUI:CreateHeader(titleText, height, backgroundColor, showCloseButto
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
     
-    -- Minimize Button (optional)
-    if showMinimizeButton then
-        local minimizeButton = Instance.new("TextButton")
-        minimizeButton.Size = UDim2.new(0, 25, 0, 25)
-        minimizeButton.Position = UDim2.new(1, showCloseButton and -60 or -30, 0, (height - 25) / 2)
-        minimizeButton.BackgroundColor3 = self.Theme.Warning
-        minimizeButton.Text = "_"
-        minimizeButton.TextColor3 = self.Theme.Text
-        minimizeButton.Font = self.Theme.TitleFont
-        minimizeButton.TextSize = 14
-        minimizeButton.Parent = header
-        
-        local minimizeCorner = Instance.new("UICorner")
-        minimizeCorner.CornerRadius = UDim.new(0, 12.5)
-        minimizeCorner.Parent = minimizeButton
-        
-        minimizeButton.MouseButton1Click:Connect(function()
-            self:ToggleMinimize()
-        end)
-        
-        self:AddHoverEffect(minimizeButton)
-        self.Elements.MinimizeButton = minimizeButton
-    end
+    local currentOffset = -30
     
-    -- Close Button (optional)
+    -- Close Button
     if showCloseButton then
         local closeButton = Instance.new("TextButton")
         closeButton.Size = UDim2.new(0, 25, 0, 25)
-        closeButton.Position = UDim2.new(1, -30, 0, (height - 25) / 2)
+        closeButton.Position = UDim2.new(1, currentOffset, 0, (height - 25) / 2)
         closeButton.BackgroundColor3 = self.Theme.Danger
         closeButton.Text = "X"
         closeButton.TextColor3 = self.Theme.Text
@@ -199,21 +182,285 @@ function EasyGUI:CreateHeader(titleText, height, backgroundColor, showCloseButto
         
         self:AddHoverEffect(closeButton)
         self.Elements.CloseButton = closeButton
+        currentOffset = currentOffset - 30
     end
     
-    -- Enable dragging
-    self:MakeDraggable(header)
+    -- Minimize Button
+    if showMinimizeButton then
+        local minimizeButton = Instance.new("TextButton")
+        minimizeButton.Size = UDim2.new(0, 25, 0, 25)
+        minimizeButton.Position = UDim2.new(1, currentOffset, 0, (height - 25) / 2)
+        minimizeButton.BackgroundColor3 = self.Theme.Warning
+        minimizeButton.Text = "_"
+        minimizeButton.TextColor3 = self.Theme.Text
+        minimizeButton.Font = self.Theme.TitleFont
+        minimizeButton.TextSize = 14
+        minimizeButton.Parent = header
+        
+        local minimizeCorner = Instance.new("UICorner")
+        minimizeCorner.CornerRadius = UDim.new(0, 12.5)
+        minimizeCorner.Parent = minimizeButton
+        
+        minimizeButton.MouseButton1Click:Connect(function()
+            self:ToggleMinimize()
+        end)
+        
+        self:AddHoverEffect(minimizeButton)
+        self.Elements.MinimizeButton = minimizeButton
+        currentOffset = currentOffset - 30
+    end
+    
+    -- Settings Button
+    if showSettingsButton then
+        local settingsButton = Instance.new("TextButton")
+        settingsButton.Name = "SettingsButton"
+        settingsButton.Size = UDim2.new(0, 25, 0, 25)
+        settingsButton.Position = UDim2.new(1, currentOffset, 0, (height - 25) / 2)
+        settingsButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+        settingsButton.Text = "⚙️"
+        settingsButton.TextSize = 14
+        settingsButton.Font = self.Theme.TitleFont
+        settingsButton.TextColor3 = self.Theme.Text
+        settingsButton.Parent = header
+        
+        local settingsCorner = Instance.new("UICorner")
+        settingsCorner.CornerRadius = UDim.new(0, 12.5)
+        settingsCorner.Parent = settingsButton
+        
+        settingsButton.MouseButton1Click:Connect(function()
+            self:ToggleSettings()
+        end)
+        
+        self:AddHoverEffect(settingsButton)
+        self.Elements.SettingsButton = settingsButton
+    end
+    
     self.Elements.Header = header
     self.Elements.Title = title
     
     return header
 end
 
+function EasyGUI:AddSettingValue(name, label, defaultValue, minValue, maxValue, step)
+    self.SettingsConfig[name] = {
+        label = label,
+        value = defaultValue,
+        min = minValue or 0,
+        max = maxValue or 2,
+        step = step or 0.1
+    }
+end
+
+function EasyGUI:ToggleSettings()
+    if self.SettingsOpen then
+        -- Close settings
+        if self.SettingsGui then
+            self.SettingsGui:Destroy()
+            self.SettingsGui = nil
+        end
+        self.SettingsOpen = false
+    else
+        -- Open settings
+        self:CreateSettingsGUI()
+        self.SettingsOpen = true
+    end
+end
+
+function EasyGUI:CreateSettingsGUI()
+    -- Buat ScreenGui untuk Settings
+    local settingsGui = Instance.new("ScreenGui")
+    settingsGui.Name = "SettingsGUI"
+    settingsGui.Parent = self.Gui.Parent
+    settingsGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    self.SettingsGui = settingsGui
+    
+    -- Background overlay
+    local overlay = Instance.new("Frame")
+    overlay.Name = "Overlay"
+    overlay.Size = UDim2.new(1, 0, 1, 0)
+    overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    overlay.BackgroundTransparency = 0.5
+    overlay.BorderSizePixel = 0
+    overlay.Parent = settingsGui
+    
+    -- Settings Frame
+    local settingsFrame = Instance.new("Frame")
+    settingsFrame.Name = "SettingsFrame"
+    settingsFrame.Size = UDim2.new(0, 280, 0, 40 + (table.getn(self.SettingsConfig) > 0 and #self.SettingsConfig or 1) * 60)
+    settingsFrame.Position = UDim2.new(0.5, -140, 0.5, -100)
+    settingsFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    settingsFrame.BorderSizePixel = 0
+    settingsFrame.Active = true
+    settingsFrame.Draggable = true
+    settingsFrame.Parent = settingsGui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = settingsFrame
+    
+    -- Header Settings
+    local headerFrame = Instance.new("Frame")
+    headerFrame.Name = "Header"
+    headerFrame.Size = UDim2.new(1, 0, 0, 35)
+    headerFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    headerFrame.BorderSizePixel = 0
+    headerFrame.Parent = settingsFrame
+    
+    local headerCorner = Instance.new("UICorner")
+    headerCorner.CornerRadius = UDim.new(0, 8)
+    headerCorner.Parent = headerFrame
+    
+    local headerTitle = Instance.new("TextLabel")
+    headerTitle.Size = UDim2.new(1, -40, 1, 0)
+    headerTitle.Position = UDim2.new(0, 10, 0, 0)
+    headerTitle.BackgroundTransparency = 1
+    headerTitle.Text = "⚙️ Settings"
+    headerTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    headerTitle.TextSize = 16
+    headerTitle.Font = Enum.Font.GothamBold
+    headerTitle.TextXAlignment = Enum.TextXAlignment.Left
+    headerTitle.Parent = headerFrame
+    
+    -- Close button
+    local closeButton = Instance.new("TextButton")
+    closeButton.Size = UDim2.new(0, 25, 0, 25)
+    closeButton.Position = UDim2.new(1, -30, 0, 5)
+    closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    closeButton.Text = "✕"
+    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeButton.TextSize = 14
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.Parent = headerFrame
+    
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 4)
+    closeCorner.Parent = closeButton
+    
+    closeButton.MouseButton1Click:Connect(function()
+        self:ToggleSettings()
+    end)
+    
+    -- Content Frame
+    local contentFrame = Instance.new("Frame")
+    contentFrame.Name = "Content"
+    contentFrame.Size = UDim2.new(1, -20, 1, -45)
+    contentFrame.Position = UDim2.new(0, 10, 0, 40)
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Parent = settingsFrame
+    
+    -- Create settings controls
+    local yPos = 0
+    for name, config in pairs(self.SettingsConfig) do
+        self:CreateSettingControl(contentFrame, name, config, yPos)
+        yPos = yPos + 60
+    end
+    
+    -- Close saat klik overlay
+    overlay.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            self:ToggleSettings()
+        end
+    end)
+end
+
+function EasyGUI:CreateSettingControl(parent, name, config, yPos)
+    local container = Instance.new("Frame")
+    container.Name = name .. "Container"
+    container.Size = UDim2.new(1, 0, 0, 50)
+    container.Position = UDim2.new(0, 0, 0, yPos)
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+    
+    -- Label
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 0, 20)
+    label.BackgroundTransparency = 1
+    label.Text = config.label
+    label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    label.TextSize = 12
+    label.Font = Enum.Font.Gotham
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = container
+    
+    -- Control container
+    local controlContainer = Instance.new("Frame")
+    controlContainer.Size = UDim2.new(1, 0, 0, 25)
+    controlContainer.Position = UDim2.new(0, 0, 0, 25)
+    controlContainer.BackgroundTransparency = 1
+    controlContainer.Parent = container
+    
+    -- Minus button
+    local minusButton = Instance.new("TextButton")
+    minusButton.Size = UDim2.new(0, 30, 0, 25)
+    minusButton.Position = UDim2.new(0, 0, 0, 0)
+    minusButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    minusButton.Text = "-"
+    minusButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    minusButton.TextSize = 16
+    minusButton.Font = Enum.Font.GothamBold
+    minusButton.Parent = controlContainer
+    
+    local minusCorner = Instance.new("UICorner")
+    minusCorner.CornerRadius = UDim.new(0, 4)
+    minusCorner.Parent = minusButton
+    
+    -- Value display
+    local valueDisplay = Instance.new("TextLabel")
+    valueDisplay.Size = UDim2.new(1, -70, 0, 25)
+    valueDisplay.Position = UDim2.new(0, 35, 0, 0)
+    valueDisplay.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    valueDisplay.Text = string.format("%.2f", config.value)
+    valueDisplay.TextColor3 = Color3.fromRGB(100, 200, 255)
+    valueDisplay.TextSize = 14
+    valueDisplay.Font = Enum.Font.GothamBold
+    valueDisplay.Parent = controlContainer
+    
+    local valueCorner = Instance.new("UICorner")
+    valueCorner.CornerRadius = UDim.new(0, 4)
+    valueCorner.Parent = valueDisplay
+    
+    -- Plus button
+    local plusButton = Instance.new("TextButton")
+    plusButton.Size = UDim2.new(0, 30, 0, 25)
+    plusButton.Position = UDim2.new(1, -30, 0, 0)
+    plusButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    plusButton.Text = "+"
+    plusButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    plusButton.TextSize = 16
+    plusButton.Font = Enum.Font.GothamBold
+    plusButton.Parent = controlContainer
+    
+    local plusCorner = Instance.new("UICorner")
+    plusCorner.CornerRadius = UDim.new(0, 4)
+    plusCorner.Parent = plusButton
+    
+    -- Button functionality
+    minusButton.MouseButton1Click:Connect(function()
+        config.value = math.max(config.min, config.value - config.step)
+        valueDisplay.Text = string.format("%.2f", config.value)
+    end)
+    
+    plusButton.MouseButton1Click:Connect(function()
+        config.value = math.min(config.max, config.value + config.step)
+        valueDisplay.Text = string.format("%.2f", config.value)
+    end)
+    
+    -- Hover effects
+    self:AddHoverEffect(minusButton)
+    self:AddHoverEffect(plusButton)
+end
+
+function EasyGUI:GetSettingValue(name)
+    if self.SettingsConfig[name] then
+        return self.SettingsConfig[name].value
+    end
+    return nil
+end
+
 function EasyGUI:ToggleMinimize()
     self.IsMinimized = not self.IsMinimized
     
     if self.IsMinimized then
-        -- Minimize: hanya tampilkan header
         self.MainFrame.Size = UDim2.new(self.OriginalSize.X.Scale, self.OriginalSize.X.Offset, 0, 30)
         self.ContentContainer.Visible = false
         
@@ -221,7 +468,6 @@ function EasyGUI:ToggleMinimize()
             self.Elements.MinimizeButton.Text = "+"
         end
     else
-        -- Restore: tampilkan semua content
         self.MainFrame.Size = self.OriginalSize
         self.ContentContainer.Visible = true
         
@@ -229,7 +475,6 @@ function EasyGUI:ToggleMinimize()
             self.Elements.MinimizeButton.Text = "_"
         end
         
-        -- Update size based on content
         self:UpdateContentSize()
     end
 end
@@ -297,7 +542,6 @@ function EasyGUI:CreateToggle(text, size, defaultState, callback, layoutOrder)
     
     local isToggled = defaultState or false
     
-    -- Add hover effect with dynamic color tracking
     self:AddHoverEffect(toggleButton, function()
         return isToggled and self.Theme.Success or self.Theme.Danger
     end)
@@ -308,7 +552,6 @@ function EasyGUI:CreateToggle(text, size, defaultState, callback, layoutOrder)
         toggleButton.BackgroundColor3 = newColor
         toggleButton.Text = isToggled and "ON" or "OFF"
         
-        -- Update the hover effect's base color
         if self.HoverEffects[toggleButton] then
             self.HoverEffects[toggleButton].originalColor = newColor
         end
@@ -328,7 +571,6 @@ function EasyGUI:CreateToggle(text, size, defaultState, callback, layoutOrder)
             toggleButton.BackgroundColor3 = newColor
             toggleButton.Text = isToggled and "ON" or "OFF"
             
-            -- Update the hover effect's base color
             if self.HoverEffects[toggleButton] then
                 self.HoverEffects[toggleButton].originalColor = newColor
             end
@@ -396,49 +638,7 @@ function EasyGUI:CreateTextBox(placeholder, size, backgroundColor, cornerRadius,
     return textBox
 end
 
-function EasyGUI:MakeDraggable(dragElement)
-    local dragging = false
-    local dragInput, dragStart, startPos
-    
-    local function update(input)
-        local delta = input.Position - dragStart
-        self.MainFrame.Position = UDim2.new(
-            startPos.X.Scale, 
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale, 
-            startPos.Y.Offset + delta.Y
-        )
-    end
-    
-    dragElement.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = self.MainFrame.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    
-    dragElement.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            update(input)
-        end
-    end)
-end
-
 function EasyGUI:AddHoverEffect(button, colorGetter)
-    -- Store original color or use color getter function
     local getOriginalColor = colorGetter or function()
         return button.BackgroundColor3
     end
@@ -483,6 +683,9 @@ function EasyGUI:SetTheme(customTheme)
 end
 
 function EasyGUI:Destroy()
+    if self.SettingsGui then
+        self.SettingsGui:Destroy()
+    end
     if self.Gui then
         self.Gui:Destroy()
     end
