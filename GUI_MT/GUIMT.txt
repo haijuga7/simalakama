@@ -1,4 +1,4 @@
--- EasyGUI Library v2.2 - With Built-in Settings
+-- EasyGUI Library v2.2 - With Built-in Settings (Fixed)
 -- Simpan sebagai: https://raw.githubusercontent.com/username/reponame/main/EasyGUI.lua
 
 local EasyGUI = {}
@@ -44,7 +44,7 @@ function EasyGUI.new(guiName, parent)
     self.OriginalContentSize = nil
     self.HoverEffects = {}
     self.SettingsOpen = false
-    self.SettingsConfig = {} -- Store settings configuration
+    self.SettingsConfig = {}
     
     return self
 end
@@ -65,7 +65,6 @@ function EasyGUI:CreateMainFrame(size, position, backgroundColor, cornerRadius)
         corner.Parent = mainFrame
     end
     
-    -- Container untuk content
     local contentContainer = Instance.new("Frame")
     contentContainer.Name = "ContentContainer"
     contentContainer.Size = UDim2.new(1, 0, 1, -30)
@@ -73,14 +72,12 @@ function EasyGUI:CreateMainFrame(size, position, backgroundColor, cornerRadius)
     contentContainer.BackgroundTransparency = 1
     contentContainer.Parent = mainFrame
     
-    -- UIListLayout untuk content
     local listLayout = Instance.new("UIListLayout")
     listLayout.Padding = UDim.new(0, 5)
     listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     listLayout.SortOrder = Enum.SortOrder.LayoutOrder
     listLayout.Parent = contentContainer
     
-    -- UIPadding untuk content
     local padding = Instance.new("UIPadding")
     padding.PaddingTop = UDim.new(0, 5)
     padding.PaddingBottom = UDim.new(0, 5)
@@ -96,7 +93,6 @@ function EasyGUI:CreateMainFrame(size, position, backgroundColor, cornerRadius)
     self.OriginalSize = mainFrame.Size
     self.OriginalContentSize = contentContainer.Size
     
-    -- Connect layout events
     listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         self:UpdateContentSize()
     end)
@@ -138,7 +134,6 @@ function EasyGUI:CreateHeader(titleText, height, backgroundColor, showCloseButto
     headerCorner.CornerRadius = UDim.new(0, 8)
     headerCorner.Parent = header
     
-    -- Calculate button positions
     local buttonCount = 0
     if showCloseButton then buttonCount = buttonCount + 1 end
     if showMinimizeButton then buttonCount = buttonCount + 1 end
@@ -146,7 +141,6 @@ function EasyGUI:CreateHeader(titleText, height, backgroundColor, showCloseButto
     
     local titleWidthOffset = buttonCount * 30
     
-    -- Title
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, -titleWidthOffset - 10, 1, 0)
     title.Position = UDim2.new(0, 10, 0, 0)
@@ -160,7 +154,6 @@ function EasyGUI:CreateHeader(titleText, height, backgroundColor, showCloseButto
     
     local currentOffset = -30
     
-    -- Close Button
     if showCloseButton then
         local closeButton = Instance.new("TextButton")
         closeButton.Size = UDim2.new(0, 25, 0, 25)
@@ -185,7 +178,6 @@ function EasyGUI:CreateHeader(titleText, height, backgroundColor, showCloseButto
         currentOffset = currentOffset - 30
     end
     
-    -- Minimize Button
     if showMinimizeButton then
         local minimizeButton = Instance.new("TextButton")
         minimizeButton.Size = UDim2.new(0, 25, 0, 25)
@@ -210,7 +202,6 @@ function EasyGUI:CreateHeader(titleText, height, backgroundColor, showCloseButto
         currentOffset = currentOffset - 30
     end
     
-    -- Settings Button
     if showSettingsButton then
         local settingsButton = Instance.new("TextButton")
         settingsButton.Name = "SettingsButton"
@@ -253,28 +244,24 @@ end
 
 function EasyGUI:ToggleSettings()
     if self.SettingsOpen then
-        -- Close settings
         if self.SettingsGui then
             self.SettingsGui:Destroy()
             self.SettingsGui = nil
         end
         self.SettingsOpen = false
     else
-        -- Open settings
         self:CreateSettingsGUI()
         self.SettingsOpen = true
     end
 end
 
 function EasyGUI:CreateSettingsGUI()
-    -- Buat ScreenGui untuk Settings
     local settingsGui = Instance.new("ScreenGui")
     settingsGui.Name = "SettingsGUI"
     settingsGui.Parent = self.Gui.Parent
     settingsGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     self.SettingsGui = settingsGui
     
-    -- Background overlay
     local overlay = Instance.new("Frame")
     overlay.Name = "Overlay"
     overlay.Size = UDim2.new(1, 0, 1, 0)
@@ -283,7 +270,6 @@ function EasyGUI:CreateSettingsGUI()
     overlay.BorderSizePixel = 0
     overlay.Parent = settingsGui
     
-    -- Hitung jumlah settings
     local settingsCount = 0
     for _ in pairs(self.SettingsConfig) do
         settingsCount = settingsCount + 1
@@ -295,7 +281,6 @@ function EasyGUI:CreateSettingsGUI()
     
     local frameHeight = 40 + (settingsCount * 60)
     
-    -- Settings Frame
     local settingsFrame = Instance.new("Frame")
     settingsFrame.Name = "SettingsFrame"
     settingsFrame.Size = UDim2.new(0, 280, 0, frameHeight)
@@ -310,7 +295,6 @@ function EasyGUI:CreateSettingsGUI()
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = settingsFrame
     
-    -- Header Settings
     local headerFrame = Instance.new("Frame")
     headerFrame.Name = "Header"
     headerFrame.Size = UDim2.new(1, 0, 0, 35)
@@ -333,7 +317,6 @@ function EasyGUI:CreateSettingsGUI()
     headerTitle.TextXAlignment = Enum.TextXAlignment.Left
     headerTitle.Parent = headerFrame
     
-    -- Close button
     local closeButton = Instance.new("TextButton")
     closeButton.Size = UDim2.new(0, 25, 0, 25)
     closeButton.Position = UDim2.new(1, -30, 0, 5)
@@ -352,7 +335,6 @@ function EasyGUI:CreateSettingsGUI()
         self:ToggleSettings()
     end)
     
-    -- Content Frame
     local contentFrame = Instance.new("Frame")
     contentFrame.Name = "Content"
     contentFrame.Size = UDim2.new(1, -20, 1, -45)
@@ -360,14 +342,12 @@ function EasyGUI:CreateSettingsGUI()
     contentFrame.BackgroundTransparency = 1
     contentFrame.Parent = settingsFrame
     
-    -- Create settings controls
     local yPos = 0
     for name, config in pairs(self.SettingsConfig) do
         self:CreateSettingControl(contentFrame, name, config, yPos)
         yPos = yPos + 60
     end
     
-    -- Close saat klik overlay
     overlay.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             self:ToggleSettings()
@@ -383,7 +363,6 @@ function EasyGUI:CreateSettingControl(parent, name, config, yPos)
     container.BackgroundTransparency = 1
     container.Parent = parent
     
-    -- Label
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 0, 20)
     label.BackgroundTransparency = 1
@@ -394,14 +373,12 @@ function EasyGUI:CreateSettingControl(parent, name, config, yPos)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = container
     
-    -- Control container
     local controlContainer = Instance.new("Frame")
     controlContainer.Size = UDim2.new(1, 0, 0, 25)
     controlContainer.Position = UDim2.new(0, 0, 0, 25)
     controlContainer.BackgroundTransparency = 1
     controlContainer.Parent = container
     
-    -- Minus button
     local minusButton = Instance.new("TextButton")
     minusButton.Size = UDim2.new(0, 30, 0, 25)
     minusButton.Position = UDim2.new(0, 0, 0, 0)
@@ -416,7 +393,6 @@ function EasyGUI:CreateSettingControl(parent, name, config, yPos)
     minusCorner.CornerRadius = UDim.new(0, 4)
     minusCorner.Parent = minusButton
     
-    -- Value display
     local valueDisplay = Instance.new("TextLabel")
     valueDisplay.Size = UDim2.new(1, -70, 0, 25)
     valueDisplay.Position = UDim2.new(0, 35, 0, 0)
@@ -431,7 +407,6 @@ function EasyGUI:CreateSettingControl(parent, name, config, yPos)
     valueCorner.CornerRadius = UDim.new(0, 4)
     valueCorner.Parent = valueDisplay
     
-    -- Plus button
     local plusButton = Instance.new("TextButton")
     plusButton.Size = UDim2.new(0, 30, 0, 25)
     plusButton.Position = UDim2.new(1, -30, 0, 0)
@@ -446,7 +421,6 @@ function EasyGUI:CreateSettingControl(parent, name, config, yPos)
     plusCorner.CornerRadius = UDim.new(0, 4)
     plusCorner.Parent = plusButton
     
-    -- Button functionality
     minusButton.MouseButton1Click:Connect(function()
         config.value = math.max(config.min, config.value - config.step)
         valueDisplay.Text = string.format("%.2f", config.value)
@@ -457,7 +431,6 @@ function EasyGUI:CreateSettingControl(parent, name, config, yPos)
         valueDisplay.Text = string.format("%.2f", config.value)
     end)
     
-    -- Hover effects
     self:AddHoverEffect(minusButton)
     self:AddHoverEffect(plusButton)
 end
