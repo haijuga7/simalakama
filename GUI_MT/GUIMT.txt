@@ -283,10 +283,22 @@ function EasyGUI:CreateSettingsGUI()
     overlay.BorderSizePixel = 0
     overlay.Parent = settingsGui
     
+    -- Hitung jumlah settings
+    local settingsCount = 0
+    for _ in pairs(self.SettingsConfig) do
+        settingsCount = settingsCount + 1
+    end
+    
+    if settingsCount == 0 then
+        settingsCount = 1
+    end
+    
+    local frameHeight = 40 + (settingsCount * 60)
+    
     -- Settings Frame
     local settingsFrame = Instance.new("Frame")
     settingsFrame.Name = "SettingsFrame"
-    settingsFrame.Size = UDim2.new(0, 280, 0, 40 + (table.getn(self.SettingsConfig) > 0 and #self.SettingsConfig or 1) * 60)
+    settingsFrame.Size = UDim2.new(0, 280, 0, frameHeight)
     settingsFrame.Position = UDim2.new(0.5, -140, 0.5, -100)
     settingsFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     settingsFrame.BorderSizePixel = 0
