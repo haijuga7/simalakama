@@ -1,57 +1,101 @@
+-- PERBAIKAN: Import services yang diperlukan
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
 local metode = {}
 
+-- PERBAIKAN: Fungsi validasi yang digunakan semua methods
+local function isValid(character, hrp)
+    return character and character.Parent == workspace and 
+           hrp and hrp.Parent == character and 
+           hrp:IsA("BasePart")
+end
+
+-- Method 1: Simple CFrame (Paling Basic)
 function metode.method1(character, hrp, targetPos)
-    if not hrp then return false end
+    if not isValid(character, hrp) then return false end
+    
     hrp.Anchored = false
     hrp.CFrame = CFrame.new(targetPos)
     task.wait(0.1)
     
+    -- PERBAIKAN: Cek lagi validasi setelah wait
+    if not isValid(character, hrp) then return false end
     return (hrp.Position - targetPos).Magnitude <= 5
 end
 
+-- Method 2: BodyPosition
 function metode.method2(character, hrp, targetPos)
-    if not hrp then return false end
+    if not isValid(character, hrp) then return false end
+    
     local bp = Instance.new("BodyPosition")
     bp.Parent = hrp
     bp.MaxForce = Vector3.new(10000, 10000, 10000)
     bp.Position = targetPos
+    
     task.wait(0.3)
-    local success = (hrp.Position - targetPos).Magnitude <= 5
-    bp:Destroy()
+    
+    local success = isValid(character, hrp) and (hrp.Position - targetPos).Magnitude <= 5
+    
+    -- PERBAIKAN: Safe destroy
+    pcall(function() bp:Destroy() end)
     return success
 end
 
-local function metode.method3(character, hrp, targetPos)
+-- Method 3: Weld + Anchor (FIXED: local function -> function)
+function metode.method3(character, hrp, targetPos)
+    if not isValid(character, hrp) then return false end
+    
     local targetCFrame = CFrame.new(targetPos)
     hrp.Anchored = false
     hrp.CFrame = targetCFrame
+    
     local anchorPart = Instance.new("Part")
-    anchorPart.Size = Vector3.new(5,1,5)
-    anchorPart.CFrame = hrp.CFrame * CFrame.new(0,-1,0)
+    anchorPart.Size = Vector3.new(5, 1, 5)
+    anchorPart.CFrame = hrp.CFrame * CFrame.new(0, -1, 0)
     anchorPart.Anchored = true
     anchorPart.CanCollide = false
     anchorPart.Transparency = 1
     anchorPart.Parent = workspace
+    
     local weld = Instance.new("WeldConstraint")
     weld.Part0 = hrp
     weld.Part1 = anchorPart
     weld.Parent = hrp
+    
     task.wait(0.2)
-    weld:Destroy()
-    anchorPart:Destroy()
-    return (hrp.Position - targetPos).Magnitude <= 5
+    
+    local success = isValid(character, hrp) and (hrp.Position - targetPos).Magnitude <= 5
+    
+    -- PERBAIKAN: Safe cleanup
+    pcall(function() weld:Destroy() end)
+    pcall(function() anchorPart:Destroy() end)
+    
+    return success
 end
 
-local function metode.method4(character, hrp, targetPos)
+-- Method 4: Seat Teleport (FIXED: local function -> function)
+function metode.method4(character, hrp, targetPos)
+    if not isValid(character, hrp) then return false end
+    
     local targetCFrame = CFrame.new(targetPos)
     hrp.Anchored = false
     hrp.CFrame = targetCFrame
+    
     local hrpPos = hrp.Position
     local closestSeat
     local closestDist = math.huge
     local searchRadius = 50
-    for _,seat in ipairs(workspace:GetDescendants()) do
-        if seat:IsA("Seat") or seat:IsA("VehicleSeat") then
+    
+    -- PERBAIKAN: Timeout untuk search
+    local searchStart = tick()
+    for _, seat in ipairs(workspace:GetDescendants()) do
+        if tick() - searchStart > 1 then break end -- Max 1 detik search
+        
+        if (seat:IsA("Seat") or seat:IsA("VehicleSeat")) and seat.Parent then
             local dist = (seat.Position - hrpPos).Magnitude
             if dist < searchRadius and dist < closestDist then
                 closestDist = dist
@@ -59,136 +103,175 @@ local function metode.method4(character, hrp, targetPos)
             end
         end
     end
+    
     if not closestSeat then return false end
+    
+    -- PERBAIKAN: Check occupant dengan timeout
     if closestSeat.Occupant then
         local t0 = tick()
-        while closestSeat.Occupant and tick()-t0<2 do
+        while closestSeat.Occupant and tick() - t0 < 2 do
             task.wait(0.2)
         end
         if closestSeat.Occupant then return false end
     end
+    
     local hum = character:FindFirstChildOfClass("Humanoid")
-    if not hum then return false end
-    closestSeat:Sit(hum)
+    if not hum or hum.Health <= 0 then return false end
+    
+    pcall(function() closestSeat:Sit(hum) end)
     task.wait(0.1)
-    return (hrp.Position - targetPos).Magnitude <= 5
+    
+    return isValid(character, hrp) and (hrp.Position - targetPos).Magnitude <= 5
 end
 
-local function metode.method5(character, hrp, targetPos)
+-- Method 5: Rope/Rifle Method (FIXED: local function -> function)
+function metode.method5(character, hrp, targetPos)
+    if not isValid(character, hrp) then return false end
+    
     local targetCFrame = CFrame.new(targetPos)
     hrp.Anchored = false
     hrp.CFrame = targetCFrame
-    local rifle = workspace:FindFirstChild("RuntimeItems") and workspace.RuntimeItems:FindFirstChild("Bolt Action Rifle")
+    
+    -- PERBAIKAN: Better item search
+    local rifle = workspace:FindFirstChild("RuntimeItems") and 
+                  workspace.RuntimeItems:FindFirstChild("Bolt Action Rifle")
+    
     if not rifle then return false end
+    
     local bolt = rifle:FindFirstChild("Bolt")
-    if not (bolt and bolt:IsA("BasePart")) then return false end
-    local att0 = Instance.new("Attachment", hrp)
-    local att1 = Instance.new("Attachment", bolt)
-    local rope = Instance.new("RopeConstraint")
-    rope.Attachment0 = att0
-    rope.Attachment1 = att1
-    rope.Length = 0.1
-    rope.Visible = false
-    rope.Parent = hrp
+    if not (bolt and bolt:IsA("BasePart") and bolt.Parent) then return false end
+    
+    local att0, att1, rope
+    local success = pcall(function()
+        att0 = Instance.new("Attachment", hrp)
+        att1 = Instance.new("Attachment", bolt)
+        rope = Instance.new("RopeConstraint")
+        rope.Attachment0 = att0
+        rope.Attachment1 = att1
+        rope.Length = 0.1
+        rope.Visible = false
+        rope.Parent = hrp
+    end)
+    
+    if not success then return false end
+    
     task.wait(0.1)
-    rope:Destroy()
-    att0:Destroy()
-    att1:Destroy()
-    return (hrp.Position - targetPos).Magnitude <= 5
+    
+    local result = isValid(character, hrp) and (hrp.Position - targetPos).Magnitude <= 5
+    
+    -- PERBAIKAN: Safe cleanup
+    pcall(function() if rope then rope:Destroy() end end)
+    pcall(function() if att0 then att0:Destroy() end end)
+    pcall(function() if att1 then att1:Destroy() end end)
+    
+    return result
 end
 
-local function metode.method6(character, hrp, targetPos)
+-- Method 6: Hook Teleport (FIXED: local function -> function, TeleportService global)
+function metode.method6(character, hrp, targetPos)
+    if not isValid(character, hrp) then return false end
+    if not hookfunction then return false end
+    
     local targetCFrame = CFrame.new(targetPos)
     hrp.Anchored = false
     
+    -- PERBAIKAN: Better hook implementation
     local oldTeleport
-    local teleported = false
+    local hookSuccess = pcall(function()
+        oldTeleport = hookfunction(TeleportService.Teleport, function(...)
+            return oldTeleport(...)
+        end)
+    end)
     
-    if not oldTeleport then
-        if hookfunction then
-            oldTeleport = hookfunction(TeleportService.Teleport,function(...)
-                teleported = true
-                return oldTeleport(...)
-            end)
-        else
-            return false
-        end
-    end
+    if not hookSuccess then return false end
     
     hrp.CFrame = targetCFrame
     task.wait(0.1)
-    return (hrp.Position - targetPos).Magnitude <= 5
+    
+    return isValid(character, hrp) and (hrp.Position - targetPos).Magnitude <= 5
 end
 
-local function metode.method7(character, hrp, targetPos)
+-- Method 7: Hook TeleportAsync (FIXED: local function -> function)
+function metode.method7(character, hrp, targetPos)
+    if not isValid(character, hrp) then return false end
+    if not hookfunction then return false end
+    
     local targetCFrame = CFrame.new(targetPos)
     hrp.Anchored = false
     
     local oldTeleportAsync
-    local teleportedAsync = false
+    local hookSuccess = pcall(function()
+        oldTeleportAsync = hookfunction(TeleportService.TeleportAsync, function(...)
+            return oldTeleportAsync(...)
+        end)
+    end)
     
-    if not oldTeleportAsync then
-        if hookfunction then
-            oldTeleportAsync = hookfunction(TeleportService.TeleportAsync,function(...)
-                teleportedAsync = true
-                return oldTeleportAsync(...)
-            end)
-        else
-            return false
-        end
-    end
+    if not hookSuccess then return false end
     
     hrp.CFrame = targetCFrame
     task.wait(0.1)
-    return (hrp.Position - targetPos).Magnitude <= 5
+    
+    return isValid(character, hrp) and (hrp.Position - targetPos).Magnitude <= 5
 end
 
-local function metode.method8(character, hrp, targetPos)
+-- Method 8: Hook LoadCharacter (FIXED: local function -> function)
+function metode.method8(character, hrp, targetPos)
+    if not isValid(character, hrp) then return false end
+    if not hookfunction then return false end
+    
     local targetCFrame = CFrame.new(targetPos)
     hrp.Anchored = false
     
     local oldLoadCharacter
-    local loadCharCalled = false
+    local hookSuccess = pcall(function()
+        oldLoadCharacter = hookfunction(LocalPlayer.LoadCharacter, function(...)
+            return oldLoadCharacter(...)
+        end)
+    end)
     
-    if not oldLoadCharacter then
-        if hookfunction and LocalPlayer.LoadCharacter then
-            oldLoadCharacter = hookfunction(LocalPlayer.LoadCharacter,function(...)
-                loadCharCalled = true
-                return oldLoadCharacter(...)
-            end)
-        else
-            return false
-        end
-    end
+    if not hookSuccess then return false end
     
     hrp.CFrame = targetCFrame
     task.wait(0.1)
-    return (hrp.Position - targetPos).Magnitude <= 5
+    
+    return isValid(character, hrp) and (hrp.Position - targetPos).Magnitude <= 5
 end
 
-local function metode.method9(character, hrp, targetPos)
+-- Method 9: NoClip + BodyVelocity (FIXED: local function -> function)
+function metode.method9(character, hrp, targetPos)
+    if not isValid(character, hrp) then return false end
+    
     local targetCFrame = CFrame.new(targetPos)
     hrp.Anchored = false
     
     local NoclipConnection
     local function noclipFunc()
-        for _,part in ipairs(character:GetDescendants()) do
+        if not isValid(character, hrp) then
+            if NoclipConnection then NoclipConnection:Disconnect() end
+            return
+        end
+        for _, part in ipairs(character:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.CanCollide = false
             end
         end
     end
+    
     NoclipConnection = RunService.Stepped:Connect(noclipFunc)
     
     local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(1e6,1e6,1e6)
+    bv.MaxForce = Vector3.new(1e6, 1e6, 1e6)
     bv.Velocity = (targetPos - hrp.Position).Unit * 100
     bv.Parent = hrp
     
     local startTime = tick()
     local success = false
-    while tick()-startTime<2 do
+    
+    while tick() - startTime < 2 do
+        if not isValid(character, hrp) then break end
+        
         bv.Velocity = (targetPos - hrp.Position).Unit * 100
+        
         if (hrp.Position - targetPos).Magnitude <= 5 then
             success = true
             break
@@ -196,96 +279,147 @@ local function metode.method9(character, hrp, targetPos)
         task.wait(0.1)
     end
     
-    bv:Destroy()
+    -- PERBAIKAN: Safe cleanup
+    pcall(function() bv:Destroy() end)
+    
     if NoclipConnection then
         NoclipConnection:Disconnect()
     end
     
-    for _,part in ipairs(character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = true
+    -- Restore collision
+    if isValid(character, hrp) then
+        for _, part in ipairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
         end
     end
     
     return success
 end
 
-local function method10(character, hrp, targetPos)
+-- Method 10: Tween (FIXED: method10 -> metode.method10)
+function metode.method10(character, hrp, targetPos)
+    if not isValid(character, hrp) then return false end
+    
     local targetCFrame = CFrame.new(targetPos)
     hrp.Anchored = false
     
     local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Linear)
     local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+    
     tween:Play()
     
     local startTime = tick()
-    while tick()-startTime < 1.5 and not (hrp.Position - targetPos).Magnitude <= 5 do
+    while tick() - startTime < 1.5 do
+        if not isValid(character, hrp) then
+            pcall(function() tween:Cancel() end)
+            return false
+        end
+        
+        if (hrp.Position - targetPos).Magnitude <= 5 then
+            break
+        end
         task.wait(0.1)
     end
     
-    return (hrp.Position - targetPos).Magnitude <= 5
+    return isValid(character, hrp) and (hrp.Position - targetPos).Magnitude <= 5
 end
 
-local function metode.method11(character, hrp, targetPos)
+-- Method 11: PivotTo (FIXED: local function -> function)
+function metode.method11(character, hrp, targetPos)
+    if not isValid(character, hrp) then return false end
+    
     local targetCFrame = CFrame.new(targetPos)
     hrp.Anchored = false
     
-    if character.PivotTo then
+    if not character.PivotTo then return false end
+    
+    local success = pcall(function()
         character:PivotTo(targetCFrame)
-        task.wait(0.1)
-        return (hrp.Position - targetPos).Magnitude <= 5
-    end
-    return false
+    end)
+    
+    if not success then return false end
+    
+    task.wait(0.1)
+    
+    return isValid(character, hrp) and (hrp.Position - targetPos).Magnitude <= 5
 end
 
-local function metode.method12(character, hrp, targetPos)
+-- Method 12: SetPrimaryPartCFrame (FIXED: local function -> function)
+function metode.method12(character, hrp, targetPos)
+    if not isValid(character, hrp) then return false end
+    
     local targetCFrame = CFrame.new(targetPos)
     hrp.Anchored = false
     
     local oldPrimary = character.PrimaryPart
-    character.PrimaryPart = hrp
-    character:SetPrimaryPartCFrame(targetCFrame)
+    
+    local success = pcall(function()
+        character.PrimaryPart = hrp
+        character:SetPrimaryPartCFrame(targetCFrame)
+    end)
+    
+    -- Restore old primary
     if oldPrimary then
-        character.PrimaryPart = oldPrimary
+        pcall(function() character.PrimaryPart = oldPrimary end)
     end
+    
+    if not success then return false end
+    
     task.wait(0.1)
-    return (hrp.Position - targetPos).Magnitude <= 5
+    
+    return isValid(character, hrp) and (hrp.Position - targetPos).Magnitude <= 5
 end
 
-local function metode.method13(character, hrp, targetPos)
+-- Method 13: Network Owner (FIXED: local function -> function)
+function metode.method13(character, hrp, targetPos)
+    if not isValid(character, hrp) then return false end
+    
     local targetCFrame = CFrame.new(targetPos)
     hrp.Anchored = false
     
-    if hrp.SetNetworkOwner then
-        pcall(function()
-            hrp:SetNetworkOwner(LocalPlayer)
-        end)
-        hrp.CFrame = targetCFrame
-        task.wait(0.1)
-        return (hrp.Position - targetPos).Magnitude <= 5
-    end
-    return false
-end
-
-local function metode.method14(character, hrp, targetPos)
-    local targetCFrame = CFrame.new(targetPos)
-    hrp.Anchored = false
+    -- PERBAIKAN: Check if SetNetworkOwner exists
+    if not hrp.SetNetworkOwner then return false end
     
-    local oldIndex
-    if not oldIndex and hookmetamethod then
-        oldIndex = hookmetamethod(game, "__index", function(obj, key)
-            return oldIndex(obj, key)
-        end)
-    else
-        return false
-    end
+    pcall(function()
+        hrp:SetNetworkOwner(LocalPlayer)
+    end)
     
     hrp.CFrame = targetCFrame
     task.wait(0.1)
-    return (hrp.Position - targetPos).Magnitude <= 5
+    
+    return isValid(character, hrp) and (hrp.Position - targetPos).Magnitude <= 5
 end
 
-local function metode.method15(character, hrp, targetPos)
+-- Method 14: Hook __index (FIXED: local function -> function)
+function metode.method14(character, hrp, targetPos)
+    if not isValid(character, hrp) then return false end
+    if not hookmetamethod then return false end
+    
+    local targetCFrame = CFrame.new(targetPos)
+    hrp.Anchored = false
+    
+    -- PERBAIKAN: Better metamethod hook
+    local oldIndex
+    local hookSuccess = pcall(function()
+        oldIndex = hookmetamethod(game, "__index", function(obj, key)
+            return oldIndex(obj, key)
+        end)
+    end)
+    
+    if not hookSuccess then return false end
+    
+    hrp.CFrame = targetCFrame
+    task.wait(0.1)
+    
+    return isValid(character, hrp) and (hrp.Position - targetPos).Magnitude <= 5
+end
+
+-- Method 15: Gravity Disable (FIXED: local function -> function)
+function metode.method15(character, hrp, targetPos)
+    if not isValid(character, hrp) then return false end
+    
     local targetCFrame = CFrame.new(targetPos)
     hrp.Anchored = false
     
@@ -293,14 +427,18 @@ local function metode.method15(character, hrp, targetPos)
     workspace.Gravity = 0
     
     local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(1e6,1e6,1e6)
+    bv.MaxForce = Vector3.new(1e6, 1e6, 1e6)
     bv.Velocity = (targetPos - hrp.Position).Unit * 50
     bv.Parent = hrp
     
     local startTime = tick()
     local success = false
-    while tick()-startTime < 2 do
+    
+    while tick() - startTime < 2 do
+        if not isValid(character, hrp) then break end
+        
         bv.Velocity = (targetPos - hrp.Position).Unit * 50
+        
         if (hrp.Position - targetPos).Magnitude <= 5 then
             success = true
             break
@@ -308,8 +446,10 @@ local function metode.method15(character, hrp, targetPos)
         task.wait(0.1)
     end
     
-    bv:Destroy()
+    -- PERBAIKAN: Safe cleanup
+    pcall(function() bv:Destroy() end)
     workspace.Gravity = oldGrav or 196.2
+    
     return success
 end
 
