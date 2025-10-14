@@ -2,8 +2,10 @@ local metode = {}
 
 function metode.method1(character, hrp, targetPos)
     if not hrp then return false end
+    hrp.Anchored = false
     hrp.CFrame = CFrame.new(targetPos)
     task.wait(0.1)
+    
     return (hrp.Position - targetPos).Magnitude <= 5
 end
 
@@ -19,30 +21,296 @@ function metode.method2(character, hrp, targetPos)
     return success
 end
 
-function metode.method3(character, hrp, targetPos)
-    if not hrp then return false end
-    hrp.CFrame = CFrame.new(targetPos)
-    hrp.Anchored = true
-    task.wait(0.1)
-    local success = (hrp.Position - targetPos).Magnitude <= 5
+local function metode.method3(character, hrp, targetPos)
+    local targetCFrame = CFrame.new(targetPos)
     hrp.Anchored = false
+    hrp.CFrame = targetCFrame
+    local anchorPart = Instance.new("Part")
+    anchorPart.Size = Vector3.new(5,1,5)
+    anchorPart.CFrame = hrp.CFrame * CFrame.new(0,-1,0)
+    anchorPart.Anchored = true
+    anchorPart.CanCollide = false
+    anchorPart.Transparency = 1
+    anchorPart.Parent = workspace
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = hrp
+    weld.Part1 = anchorPart
+    weld.Parent = hrp
+    task.wait(0.2)
+    weld:Destroy()
+    anchorPart:Destroy()
+    return (hrp.Position - targetPos).Magnitude <= 5
+end
+
+local function metode.method4(character, hrp, targetPos)
+    local targetCFrame = CFrame.new(targetPos)
+    hrp.Anchored = false
+    hrp.CFrame = targetCFrame
+    local hrpPos = hrp.Position
+    local closestSeat
+    local closestDist = math.huge
+    local searchRadius = 50
+    for _,seat in ipairs(workspace:GetDescendants()) do
+        if seat:IsA("Seat") or seat:IsA("VehicleSeat") then
+            local dist = (seat.Position - hrpPos).Magnitude
+            if dist < searchRadius and dist < closestDist then
+                closestDist = dist
+                closestSeat = seat
+            end
+        end
+    end
+    if not closestSeat then return false end
+    if closestSeat.Occupant then
+        local t0 = tick()
+        while closestSeat.Occupant and tick()-t0<2 do
+            task.wait(0.2)
+        end
+        if closestSeat.Occupant then return false end
+    end
+    local hum = character:FindFirstChildOfClass("Humanoid")
+    if not hum then return false end
+    closestSeat:Sit(hum)
+    task.wait(0.1)
+    return (hrp.Position - targetPos).Magnitude <= 5
+end
+
+local function metode.method5(character, hrp, targetPos)
+    local targetCFrame = CFrame.new(targetPos)
+    hrp.Anchored = false
+    hrp.CFrame = targetCFrame
+    local rifle = workspace:FindFirstChild("RuntimeItems") and workspace.RuntimeItems:FindFirstChild("Bolt Action Rifle")
+    if not rifle then return false end
+    local bolt = rifle:FindFirstChild("Bolt")
+    if not (bolt and bolt:IsA("BasePart")) then return false end
+    local att0 = Instance.new("Attachment", hrp)
+    local att1 = Instance.new("Attachment", bolt)
+    local rope = Instance.new("RopeConstraint")
+    rope.Attachment0 = att0
+    rope.Attachment1 = att1
+    rope.Length = 0.1
+    rope.Visible = false
+    rope.Parent = hrp
+    task.wait(0.1)
+    rope:Destroy()
+    att0:Destroy()
+    att1:Destroy()
+    return (hrp.Position - targetPos).Magnitude <= 5
+end
+
+local function metode.method6(character, hrp, targetPos)
+    local targetCFrame = CFrame.new(targetPos)
+    hrp.Anchored = false
+    
+    local oldTeleport
+    local teleported = false
+    
+    if not oldTeleport then
+        if hookfunction then
+            oldTeleport = hookfunction(TeleportService.Teleport,function(...)
+                teleported = true
+                return oldTeleport(...)
+            end)
+        else
+            return false
+        end
+    end
+    
+    hrp.CFrame = targetCFrame
+    task.wait(0.1)
+    return (hrp.Position - targetPos).Magnitude <= 5
+end
+
+local function metode.method7(character, hrp, targetPos)
+    local targetCFrame = CFrame.new(targetPos)
+    hrp.Anchored = false
+    
+    local oldTeleportAsync
+    local teleportedAsync = false
+    
+    if not oldTeleportAsync then
+        if hookfunction then
+            oldTeleportAsync = hookfunction(TeleportService.TeleportAsync,function(...)
+                teleportedAsync = true
+                return oldTeleportAsync(...)
+            end)
+        else
+            return false
+        end
+    end
+    
+    hrp.CFrame = targetCFrame
+    task.wait(0.1)
+    return (hrp.Position - targetPos).Magnitude <= 5
+end
+
+local function metode.method8(character, hrp, targetPos)
+    local targetCFrame = CFrame.new(targetPos)
+    hrp.Anchored = false
+    
+    local oldLoadCharacter
+    local loadCharCalled = false
+    
+    if not oldLoadCharacter then
+        if hookfunction and LocalPlayer.LoadCharacter then
+            oldLoadCharacter = hookfunction(LocalPlayer.LoadCharacter,function(...)
+                loadCharCalled = true
+                return oldLoadCharacter(...)
+            end)
+        else
+            return false
+        end
+    end
+    
+    hrp.CFrame = targetCFrame
+    task.wait(0.1)
+    return (hrp.Position - targetPos).Magnitude <= 5
+end
+
+local function metode.method9(character, hrp, targetPos)
+    local targetCFrame = CFrame.new(targetPos)
+    hrp.Anchored = false
+    
+    local NoclipConnection
+    local function noclipFunc()
+        for _,part in ipairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+    NoclipConnection = RunService.Stepped:Connect(noclipFunc)
+    
+    local bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(1e6,1e6,1e6)
+    bv.Velocity = (targetPos - hrp.Position).Unit * 100
+    bv.Parent = hrp
+    
+    local startTime = tick()
+    local success = false
+    while tick()-startTime<2 do
+        bv.Velocity = (targetPos - hrp.Position).Unit * 100
+        if (hrp.Position - targetPos).Magnitude <= 5 then
+            success = true
+            break
+        end
+        task.wait(0.1)
+    end
+    
+    bv:Destroy()
+    if NoclipConnection then
+        NoclipConnection:Disconnect()
+    end
+    
+    for _,part in ipairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = true
+        end
+    end
+    
     return success
 end
 
-function metode.method4(character, hrp, targetPos)
-    if not hrp then return false end
-    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Linear)
-    local tween = game:GetService("TweenService"):Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos)})
+local function method10(character, hrp, targetPos)
+    local targetCFrame = CFrame.new(targetPos)
+    hrp.Anchored = false
+    
+    local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
     tween:Play()
-    task.wait(0.6)
+    
+    local startTime = tick()
+    while tick()-startTime < 1.5 and not (hrp.Position - targetPos).Magnitude <= 5 do
+        task.wait(0.1)
+    end
+    
     return (hrp.Position - targetPos).Magnitude <= 5
 end
 
-function metode.method5(character, hrp, targetPos)
-    if not character or not character.PrimaryPart then return false end
-    character:SetPrimaryPartCFrame(CFrame.new(targetPos))
+local function metode.method11(character, hrp, targetPos)
+    local targetCFrame = CFrame.new(targetPos)
+    hrp.Anchored = false
+    
+    if character.PivotTo then
+        character:PivotTo(targetCFrame)
+        task.wait(0.1)
+        return (hrp.Position - targetPos).Magnitude <= 5
+    end
+    return false
+end
+
+local function metode.method12(character, hrp, targetPos)
+    local targetCFrame = CFrame.new(targetPos)
+    hrp.Anchored = false
+    
+    local oldPrimary = character.PrimaryPart
+    character.PrimaryPart = hrp
+    character:SetPrimaryPartCFrame(targetCFrame)
+    if oldPrimary then
+        character.PrimaryPart = oldPrimary
+    end
     task.wait(0.1)
     return (hrp.Position - targetPos).Magnitude <= 5
+end
+
+local function metode.method13(character, hrp, targetPos)
+    local targetCFrame = CFrame.new(targetPos)
+    hrp.Anchored = false
+    
+    if hrp.SetNetworkOwner then
+        pcall(function()
+            hrp:SetNetworkOwner(LocalPlayer)
+        end)
+        hrp.CFrame = targetCFrame
+        task.wait(0.1)
+        return (hrp.Position - targetPos).Magnitude <= 5
+    end
+    return false
+end
+
+local function metode.method14(character, hrp, targetPos)
+    local targetCFrame = CFrame.new(targetPos)
+    hrp.Anchored = false
+    
+    local oldIndex
+    if not oldIndex and hookmetamethod then
+        oldIndex = hookmetamethod(game, "__index", function(obj, key)
+            return oldIndex(obj, key)
+        end)
+    else
+        return false
+    end
+    
+    hrp.CFrame = targetCFrame
+    task.wait(0.1)
+    return (hrp.Position - targetPos).Magnitude <= 5
+end
+
+local function metode.method15(character, hrp, targetPos)
+    local targetCFrame = CFrame.new(targetPos)
+    hrp.Anchored = false
+    
+    local oldGrav = workspace.Gravity
+    workspace.Gravity = 0
+    
+    local bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(1e6,1e6,1e6)
+    bv.Velocity = (targetPos - hrp.Position).Unit * 50
+    bv.Parent = hrp
+    
+    local startTime = tick()
+    local success = false
+    while tick()-startTime < 2 do
+        bv.Velocity = (targetPos - hrp.Position).Unit * 50
+        if (hrp.Position - targetPos).Magnitude <= 5 then
+            success = true
+            break
+        end
+        task.wait(0.1)
+    end
+    
+    bv:Destroy()
+    workspace.Gravity = oldGrav or 196.2
+    return success
 end
 
 return metode
